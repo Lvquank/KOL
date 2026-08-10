@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Local temp files
 temp/
+
+# Graphify generated analysis
+src/graphify-out/

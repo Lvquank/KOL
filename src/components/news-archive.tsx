@@ -3,49 +3,242 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Clock3, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchApiNews,
+  fetchApiCategories,
+  formatNewsDate,
+  type ApiNewsItem,
+  type ApiCategoryItem,
+  FALLBACK_NEWS,
+  FALLBACK_CATEGORIES,
+} from "@/lib/api-news";
 
-type Category = "Tất cả" | "Hoạt động cục" | "Sự kiện" | "Tin tức nổi bật";
+interface NewsArchiveProps {
+  initialCategories?: ApiCategoryItem[];
+  initialNews?: ApiNewsItem[];
+}
 
-const posts = [
-  { title: "Thủ tướng: Mỗi người dân cần ứng xử văn minh trên không gian mạng", category: "Tin tức nổi bật", date: "07/08/2026", image: "/assets/news/an-ninh-mang.webp", brief: "Tại lễ mít tinh hưởng ứng Ngày An ninh mạng Việt Nam, Thủ tướng đề nghị mỗi người dân tự trang bị kỹ năng số và cùng chung sức xây dựng môi trường mạng lành mạnh." },
-  { title: "Chuẩn hóa kỹ năng Livestream, nâng cao trách nhiệm của nhà sáng tạo nội dung số.", category: "Tin tức nổi bật", date: "03/08/2026", image: "/assets/news/livestream.webp", brief: "Lớp bồi dưỡng nghiệp vụ Livestream góp phần nâng cao năng lực nghề nghiệp, nhận thức pháp luật và trách nhiệm của đội ngũ sáng tạo nội dung số." },
-  { title: "Livestream lậu có thể bị xử phạt tới 250 triệu đồng", category: "Tin tức nổi bật", date: "30/07/2026", image: "/assets/news/ban-quyen.webp", brief: "Các chuyên gia cảnh báo tình trạng đăng tải, livestream trái phép những nội dung số đang diễn ra ngày càng tinh vi và cần được xử lý nghiêm." },
-  { title: "Hình thành đội ngũ nhà sáng tạo nội dung số chuyên nghiệp", category: "Sự kiện", date: "29/07/2026", image: "/assets/news/livestream.webp", brief: "Chương trình đào tạo hướng đến việc hình thành lực lượng nhà sáng tạo nội dung số có kỹ năng, trách nhiệm và phát triển bền vững." },
-  { title: "Trung tâm Đo kiểm hợp tác chiến lược với Nutifood nhằm đào tạo nguồn nhân lực truyền thông số", category: "Hoạt động cục", date: "25/07/2026", image: "/assets/news/gioi-thieu.webp", brief: "Trung tâm Đo kiểm Phát thanh, Truyền hình và Thông tin điện tử ký kết thỏa thuận hợp tác chiến lược nhằm phát triển nguồn nhân lực truyền thông số." },
-  { title: "Bộ quy tắc ứng xử văn hóa trên môi trường số", category: "Hoạt động cục", date: "20/07/2026", image: "/assets/news/bo-quy-tac.webp", brief: "Các khuyến nghị góp phần xây dựng không gian số an toàn, lành mạnh và có trách nhiệm cho cộng đồng." },
-] as const;
+const PAGE_SIZE = 6;
 
-const categories: Category[] = ["Tất cả", "Hoạt động cục", "Sự kiện", "Tin tức nổi bật"];
-
-export function NewsArchive() {
-  const [category, setCategory] = useState<Category>("Tất cả");
+export function NewsArchive({
+  initialCategories = FALLBACK_CATEGORIES,
+  initialNews = FALLBACK_NEWS,
+}: NewsArchiveProps) {
+  const [items, setItems] = useState<ApiNewsItem[]>(
+    initialNews && initialNews.length > 0 ? initialNews : FALLBACK_NEWS
+  );
+  const [categoriesList, setCategoriesList] = useState<ApiCategoryItem[]>(
+    initialCategories && initialCategories.length > 0 ? initialCategories : FALLBACK_CATEGORIES
+  );
+  const [category, setCategory] = useState<string>("Tất cả");
   const [query, setQuery] = useState("");
-  const filteredPosts = useMemo(() => posts.filter((post) => (category === "Tất cả" || post.category === category) && `${post.title} ${post.brief}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [category, query]);
-  const featured = posts[4];
+  const [page, setPage] = useState(1);
 
-  return <div className="archive-page">
-    <div className="archive-crumb"><div className="site-container"><Link href="/">Trang chủ</Link><span>/</span><strong>Bản tin</strong></div></div>
-    <section className="archive-title"><div className="site-container"><h1>Bản tin</h1><p>Thông tin, báo cáo, phân tích từ Cục Phát thanh, truyền hình và thông tin điện tử</p></div></section>
-    <div className="site-container archive-layout">
-      <section className="archive-main">
-        <div className="archive-filters">
-          <label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm kiếm tin tức..." /></label>
-          <div>{categories.map((item) => <button type="button" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div>
+  // Client-side refresh backup on mount
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([fetchApiCategories(), fetchApiNews()]).then(([cats, newsData]) => {
+      if (!isMounted) return;
+      if (cats && cats.length > 0) {
+        setCategoriesList(cats);
+      }
+      if (newsData && newsData.length > 0) {
+        setItems(newsData);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleCategoryChange = (newCat: string) => {
+    setCategory(newCat);
+    setPage(1);
+  };
+
+  const handleQueryChange = (q: string) => {
+    setQuery(q);
+    setPage(1);
+  };
+
+  const categoryNames = useMemo(() => {
+    const names = categoriesList.map((c) => c.name);
+    return ["Tất cả", ...Array.from(new Set(names))];
+  }, [categoriesList]);
+
+  const filteredPosts = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return items.filter((item) => {
+      const matchCategory =
+        category === "Tất cả" ||
+        item.category === category ||
+        item.categories?.some((c) => c.name === category);
+
+      const matchText =
+        !q ||
+        item.title.toLowerCase().includes(q) ||
+        (item.excerpt && item.excerpt.toLowerCase().includes(q));
+
+      return matchCategory && matchText;
+    });
+  }, [items, category, query]);
+
+  const totalPages = Math.ceil(filteredPosts.length / PAGE_SIZE);
+  const paginatedPosts = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredPosts.slice(start, start + PAGE_SIZE);
+  }, [filteredPosts, page]);
+
+  const featured = items[0] || FALLBACK_NEWS[0];
+  const latestPosts = items.slice(0, 5);
+
+  return (
+    <div className="archive-page">
+      <div className="archive-crumb">
+        <div className="site-container">
+          <Link href="/">Trang chủ</Link>
+          <span>/</span>
+          <strong>Bản tin</strong>
         </div>
-        <p className="archive-count">Tìm thấy {filteredPosts.length} bài viết</p>
-        <div className="archive-list">{filteredPosts.map((post) => <a href={`https://kol.gov.vn/tin-tuc/${post.title === posts[0].title ? "thu-tuong-moi-nguoi-dan-can-ung-xu-van-minh-tren-khong-gian-mang" : ""}`} target="_blank" rel="noreferrer" className="archive-card" key={post.title}>
-          <div className="archive-image"><Image src={post.image} alt={post.title} fill sizes="(max-width: 767px) 100vw, 240px" /></div>
-          <div className="archive-copy"><span>{post.category}</span><h2>{post.title}</h2><p>{post.brief}</p><small><Clock3 size={13} />{post.date}<i>·</i>1 phút đọc</small></div>
-        </a>)}</div>
-        {filteredPosts.length === 0 && <p className="archive-empty">Không tìm thấy bài viết phù hợp.</p>}
-        <div className="archive-pages"><button type="button" aria-current="page">1</button><button type="button">2</button></div>
+      </div>
+      <section className="archive-title">
+        <div className="site-container">
+          <h1>Bản tin</h1>
+          <p>Thông tin, báo cáo, phân tích từ Cục Phát thanh, truyền hình và thông tin điện tử</p>
+        </div>
       </section>
-      <aside className="archive-sidebar">
-        <section><h2>Tin nổi bật</h2><a className="sidebar-featured" href="https://kol.gov.vn/tin-tuc" target="_blank" rel="noreferrer"><Image src={featured.image} alt="" width={110} height={76} /><span><b>{featured.category}</b>{featured.title}<small>{featured.date}</small></span></a></section>
-        <section><h2>Tin mới nhất</h2>{posts.slice(0, 4).map((post) => <a className="sidebar-row" href="https://kol.gov.vn/tin-tuc" target="_blank" rel="noreferrer" key={post.title}><span>{post.title}<small>{post.date}</small></span></a>)}</section>
-        <section><h2>Danh mục</h2>{categories.slice(1).map((item) => <button type="button" key={item} onClick={() => setCategory(item)}>{item}<span>{posts.filter((post) => post.category === item).length}</span></button>)}</section>
-      </aside>
+      <div className="site-container archive-layout">
+        <section className="archive-main">
+          <div className="archive-filters">
+            <label>
+              <Search size={17} />
+              <input
+                value={query}
+                onChange={(event) => handleQueryChange(event.target.value)}
+                placeholder="Tìm kiếm tin tức..."
+              />
+            </label>
+            <div>
+              {categoryNames.map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  aria-pressed={category === item}
+                  onClick={() => handleCategoryChange(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="archive-count">Tìm thấy {filteredPosts.length} bài viết</p>
+          <div className="archive-list">
+            {paginatedPosts.map((post) => (
+              <Link
+                href={`/tin-tuc/${post.slug}`}
+                className="archive-card"
+                key={post.slug || post.title}
+              >
+                <div className="archive-image">
+                  <Image
+                    src={post.image_url}
+                    alt={post.title}
+                    fill
+                    sizes="(max-width: 767px) 100vw, 240px"
+                    unoptimized={post.image_url.startsWith("http")}
+                  />
+                </div>
+                <div className="archive-copy">
+                  <span>{post.category || "TIN TỨC"}</span>
+                  <h2>{post.title}</h2>
+                  <p>{post.excerpt || post.title}</p>
+                  <small>
+                    <Clock3 size={13} />
+                    {formatNewsDate(post.published_date)}
+                    <i>·</i>
+                    {post.reading_minutes ? `${post.reading_minutes} phút đọc` : "2 phút đọc"}
+                  </small>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {filteredPosts.length === 0 && (
+            <p className="archive-empty">Không tìm thấy bài viết phù hợp.</p>
+          )}
+          {totalPages > 1 && (
+            <div className="archive-pages">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  type="button"
+                  key={p}
+                  aria-current={p === page ? "page" : undefined}
+                  onClick={() => {
+                    setPage(p);
+                    if (typeof window !== "undefined") {
+                      window.scrollTo({ top: 200, behavior: "smooth" });
+                    }
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+        <aside className="archive-sidebar">
+          {featured && (
+            <section>
+              <h2>Tin nổi bật</h2>
+              <Link
+                className="sidebar-featured"
+                href={`/tin-tuc/${featured.slug}`}
+              >
+                <Image
+                  src={featured.image_url}
+                  alt={featured.title}
+                  width={110}
+                  height={76}
+                  unoptimized={featured.image_url.startsWith("http")}
+                />
+                <span>
+                  <b>{featured.category || "TIN NỔI BẬT"}</b>
+                  {featured.title}
+                  <small>{formatNewsDate(featured.published_date)}</small>
+                </span>
+              </Link>
+            </section>
+          )}
+          <section>
+            <h2>Tin mới nhất</h2>
+            {latestPosts.map((post) => (
+              <Link
+                className="sidebar-row"
+                href={`/tin-tuc/${post.slug}`}
+                key={post.slug || post.title}
+              >
+                <span>
+                  {post.title}
+                  <small>{formatNewsDate(post.published_date)}</small>
+                </span>
+              </Link>
+            ))}
+          </section>
+          <section>
+            <h2>Danh mục</h2>
+            {categoriesList.map((item) => (
+              <button
+                type="button"
+                key={item.category_key || item.name}
+                onClick={() => handleCategoryChange(item.name)}
+              >
+                {item.name}
+                <span>{item.post_count}</span>
+              </button>
+            ))}
+          </section>
+        </aside>
+      </div>
     </div>
-  </div>;
+  );
 }

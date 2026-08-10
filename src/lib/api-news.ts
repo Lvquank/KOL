@@ -31,7 +31,7 @@ export interface ApiNewsItem {
 }
 
 export interface ApiNewsResponse {
-  success: boolean;
+  success?: boolean;
   data: ApiNewsItem[];
   pagination: {
     page: number;
@@ -59,7 +59,7 @@ export async function fetchApiCategories(): Promise<ApiCategoryItem[]> {
   try {
     const fetchOptions: RequestInit =
       typeof window === "undefined" ? { next: { revalidate: 60 } } as RequestInit : { cache: "no-store" };
-    const res = await fetch("http://127.0.0.1:4000/api/v1/categories", fetchOptions);
+    const res = await fetch("http://127.0.0.1:4000/api/v1/news/categories", fetchOptions);
     if (!res.ok) {
       throw new Error(`API error: ${res.status}`);
     }
@@ -85,7 +85,7 @@ export async function fetchApiNews(category?: string): Promise<ApiNewsItem[]> {
       throw new Error(`API error: ${res.status}`);
     }
     const json: ApiNewsResponse = await res.json();
-    if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+    if (Array.isArray(json.data) && json.data.length > 0) {
       if (category && category !== "Tất cả") {
         return json.data.filter(
           (item) =>

@@ -7,26 +7,26 @@ export const newsItems: NewsItem[] = [
     title: "Thủ tướng: Mỗi người dân cần ứng xử văn minh trên không gian mạng",
     image: "/assets/news/an-ninh-mang.webp",
     sourcePath: "tin-tuc/thu-tuong-moi-nguoi-dan-can-ung-xu-van-minh-tren-khong-gian-mang",
-    date: "07/08/2026",
+    date: "07/08/2026"
   },
   {
     title: "Chuẩn hóa kỹ năng Livestream, nâng cao trách nhiệm của nhà sáng tạo nội dung số.",
     image: "/assets/news/livestream.webp",
     sourcePath: "tin-tuc/chuan-hoa-ky-nang-livestream-nang-cao-trach-nhiem-cua-nha-sang-tao-noi-dung-so",
-    date: "03/08/2026",
+    date: "03/08/2026"
   },
   {
     title: "Livestream lậu có thể bị xử phạt tới 250 triệu đồng",
     image: "/assets/news/ban-quyen.webp",
     sourcePath: "tin-tuc/livestream-lau-co-the-bi-xu-phat-toi-250-trieu-dong",
-    date: "30/07/2026",
-  },
+    date: "30/07/2026"
+  }
 ];
 
 export const documentItems = [
   { title: "GIỚI THIỆU TỔNG QUAN VỀ CỔNG THÔNG TIN KOL.GOV.VN", image: "/assets/news/gioi-thieu.webp", localPath: "/tin-tuc/gioi-thieu-tong-quan-ve-cong-thong-tin-kolgovvn" },
   { title: "BỘ QUY TẮC ỨNG XỬ VĂN HOÁ TRÊN MÔI TRƯỜNG SỐ", image: "/assets/news/bo-quy-tac.webp", localPath: "/tin-tuc/bo-quy-tac-ung-xu-van-hoa-tren-moi-truong-so" },
-  { title: "THÔNG CÁO BÁO CHÍ", image: "/assets/news/thong-cao.webp" },
+  { title: "THÔNG CÁO BÁO CHÍ", image: "/assets/news/thong-cao.webp" }
 ];
 
 export const featuredPeople: RankedPerson[] = [
@@ -55,7 +55,7 @@ export const networkRows: RankedNetwork[] = [
   { rank: 7, name: "VietNamNet", detail: "4 kênh · 0 KOL", image: "/assets/mcn/vietnamnet.webp", metric: "+1.2 Tr", delta: "+18.4%" },
   { rank: 8, name: "Radiant VN", detail: "13 kênh · 0 KOL", image: "/assets/mcn/radiant.webp", metric: "+645,389", delta: "+2.0%" },
   { rank: 9, name: "Trung tâm Nội Dung Số", detail: "26 kênh · 1 KOL", image: "/assets/mcn/noi-dung-so.webp", metric: "+611,677", delta: "+0.5%" },
-  { rank: 10, name: "Vietnam Music Award", detail: "23 kênh · 0 KOL", image: "/assets/mcn/vma.webp", metric: "+96,735", delta: "+0.4%" },
+  { rank: 10, name: "Vietnam Music Award", detail: "23 kênh · 0 KOL", image: "/assets/mcn/vma.webp", metric: "+96,735", delta: "+0.4%" }
 ];
 
 export const socialItems: SocialItem[] = [
@@ -68,5 +68,5 @@ export const socialItems: SocialItem[] = [
   { rank: 7, name: "Nguyễn Văn Chung", score: "23.265", image: "/assets/social/nguyen-van-chung.jpg" },
   { rank: 8, name: "Quang Hùng MasterD", score: "23.094", image: "/assets/social/quang-hung.jpg" },
   { rank: 9, name: "Bùi Công Nam", score: "22.770", image: "/assets/social/bui-cong-nam.jpg" },
-  { rank: 10, name: "CongB", score: "20.761", image: "/assets/social/congb.jpg" },
+  { rank: 10, name: "CongB", score: "20.761", image: "/assets/social/congb.jpg" }
 ];

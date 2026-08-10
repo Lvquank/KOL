@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowRight, Star, TrendingUp, X, Search } from "lucide-react";
 import { useState, Suspense } from "react";
@@ -91,7 +92,11 @@ function RankingsContent() {
           {filteredFeatured.length > 0 && (
             <div className="featured-people">
               {filteredFeatured.map((person) => (
-                <div className="featured-person" key={person.rank}>
+                <Link
+                  href={`/nguoi-noi-tieng/${person.key || encodeURIComponent(person.name)}`}
+                  className="featured-person"
+                  key={person.rank}
+                >
                   <Image src={person.image} alt={person.name} fill sizes="190px" />
                   <span className={`rank-badge rank-${person.rank}`}>
                     <Star size={10} fill="currentColor" />Top {person.rank}
@@ -103,14 +108,18 @@ function RankingsContent() {
                       {person.metric} <small><TrendingUp size={10} />{person.delta}</small>
                     </strong>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
 
           <div className="rank-list">
             {filteredPeople.map((person) => (
-              <div className="person-row" key={person.rank}>
+              <Link
+                href={`/nguoi-noi-tieng/${person.key || encodeURIComponent(person.name)}`}
+                className="person-row cursor-pointer"
+                key={person.rank}
+              >
                 <span className="row-rank">{person.rank}</span>
                 <Image src={person.image} alt={person.name} width={40} height={40} />
                 <div>
@@ -122,7 +131,7 @@ function RankingsContent() {
                   <b><TrendingUp size={12} />{person.metric}</b>
                   <em>{person.delta}</em>
                 </p>
-              </div>
+              </Link>
             ))}
             {filteredFeatured.length === 0 && filteredPeople.length === 0 && (
               <div className="empty-search-notice">Không tìm thấy KOL phù hợp với &ldquo;{query}&rdquo;</div>

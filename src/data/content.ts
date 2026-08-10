@@ -24,8 +24,8 @@ export const newsItems: NewsItem[] = [
 ];
 
 export const documentItems = [
-  { title: "GIỚI THIỆU TỔNG QUAN VỀ CỔNG THÔNG TIN KOL.GOV.VN", image: "/assets/news/gioi-thieu.webp" },
-  { title: "BỘ QUY TẮC ỨNG XỬ VĂN HOÁ TRÊN MÔI TRƯỜNG SỐ", image: "/assets/news/bo-quy-tac.webp" },
+  { title: "GIỚI THIỆU TỔNG QUAN VỀ CỔNG THÔNG TIN KOL.GOV.VN", image: "/assets/news/gioi-thieu.webp", localPath: "/tin-tuc/gioi-thieu-tong-quan-ve-cong-thong-tin-kolgovvn" },
+  { title: "BỘ QUY TẮC ỨNG XỬ VĂN HOÁ TRÊN MÔI TRƯỜNG SỐ", image: "/assets/news/bo-quy-tac.webp", localPath: "/tin-tuc/bo-quy-tac-ung-xu-van-hoa-tren-moi-truong-so" },
   { title: "THÔNG CÁO BÁO CHÍ", image: "/assets/news/thong-cao.webp" },
 ];
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { documentItems, newsItems, sourceUrl } from "@/data/content";
@@ -18,7 +19,7 @@ export function NewsBoard() {
     <section className="news-section" id="news">
       <div className="section-heading-row">
         <h2>Bản tin</h2>
-        <a href={`${sourceUrl}tin-tuc`} target="_blank" rel="noreferrer">Xem tất cả <ChevronRight size={16} /></a>
+        <Link href="/tin-tuc">Xem tất cả <ChevronRight size={16} /></Link>
       </div>
       <div className="news-layout">
         <div className="news-grid">
@@ -40,7 +41,7 @@ export function NewsBoard() {
         </div>
         <div className="document-list" id="documents">
           {documentItems.map((item) => (
-            <a href={sourceUrl} target="_blank" rel="noreferrer" key={item.title}>
+            <a href={item.localPath ?? sourceUrl} target={item.localPath ? undefined : "_blank"} rel={item.localPath ? undefined : "noreferrer"} key={item.title}>
               <div className="document-thumb"><Image src={item.image} alt="" fill sizes="140px" /></div><span>{item.title}</span>
             </a>
           ))}

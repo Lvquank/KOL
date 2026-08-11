@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Check, MailWarning } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type RegistrationType = "kol" | "mcn";
@@ -8,6 +9,7 @@ type RegistrationType = "kol" | "mcn";
 export function RegistrationSafety() {
   const [selectedType, setSelectedType] = useState<RegistrationType | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const router = useRouter();
   const selectedLabel = selectedType === "kol" ? "Cá nhân / KOL" : "Tổ chức / MCN";
 
   const selectType = (type: RegistrationType) => {
@@ -24,7 +26,7 @@ export function RegistrationSafety() {
       </div>
       <ul><li><Check size={14} />Nhận dấu xác minh chính thức trên hồ sơ</li><li><Check size={14} />Tăng độ tin cậy với nhãn hàng và khách hàng</li><li><Check size={14} />Được hỗ trợ pháp lý khi có tranh chấp</li></ul>
       {confirmed && <p className="registration-confirmation" role="status">Đã chọn <strong>{selectedLabel}</strong>. Thông tin đăng ký chưa được gửi khỏi máy của bạn.</p>}
-      <button type="button" className="continue-button" disabled={!selectedType} onClick={() => setConfirmed(true)}>{selectedType ? `Tiếp tục với ${selectedLabel}` : "Chọn loại đăng ký để tiếp tục"} <ArrowRight size={17} /></button>
+      <button type="button" className="continue-button" disabled={!selectedType} onClick={() => selectedType && router.push(selectedType === "kol" ? "/nguoi-noi-tieng/khai-bao" : "/mcn/khai-bao")}>{selectedType ? `Tiếp tục với ${selectedLabel}` : "Chọn loại đăng ký để tiếp tục"} <ArrowRight size={17} /></button>
     </div>
     <div className="report-panel"><h3><MailWarning />Phản ánh nội dung vi phạm<br />của KOL/Kênh nhanh chóng</h3><div className="disabled-form" aria-disabled="true"><input disabled placeholder="Họ và tên (*)" /><input disabled placeholder="Số điện thoại (*)" /><input disabled placeholder="Email" /><button type="button" disabled>Nhóm phản ánh (*)</button><textarea disabled placeholder="Nhập nội dung phản ánh (*)" /><small>0/2000</small><button type="button" disabled>Gửi phản ánh</button></div><p className="form-safety">Bản local không thu thập hoặc gửi dữ liệu.</p></div>
   </section>;

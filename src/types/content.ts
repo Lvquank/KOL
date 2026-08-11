@@ -12,6 +12,7 @@ export type RankedPerson = {
   image: string;
   metric: string;
   delta: string;
+  key?: string;
 };
 
 export type RankedNetwork = {
@@ -21,6 +22,7 @@ export type RankedNetwork = {
   image: string;
   metric: string;
   delta: string;
+  sourceId?: string;
 };
 
 export type SocialItem = {
@@ -28,4 +30,5 @@ export type SocialItem = {
   name: string;
   score: string;
   image: string;
+  key?: string;
 };

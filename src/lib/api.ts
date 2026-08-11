@@ -1,9 +1,11 @@
-export const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"
+export const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 )
   .replace(/[\u200B-\u200D\uFEFF]/g, "")
   .trim()
   .replace(/\/+$/, "");
+
+export const API_BASE_URL = `${API_URL}/api/v1`;
 
 export type ApiPagination = {
   page: number;

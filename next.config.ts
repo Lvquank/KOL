@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.vnecdn.net",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.netspace.vn",
+      },
     ],
   },
 };

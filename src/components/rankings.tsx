@@ -192,26 +192,34 @@ function RankingsContent() {
           {filteredFeatured.length > 0 && (
             <div className="featured-people">
               {filteredFeatured.map((person) => (
-                <div className="featured-person" key={person.rank}>
+                <Link
+                  href={`/nguoi-noi-tieng/${person.key || encodeURIComponent(person.name)}`}
+                  className="featured-person"
+                  key={person.rank}
+                >
                   <DataImage className="ranking-image-fill" src={person.image} fallback={fallbackPeople.find((item) => item.rank === person.rank)?.image || "/assets/kols/ivan.jpg"} alt={person.name} />
                   <span className={`rank-badge rank-${person.rank}`}><Star size={10} fill="currentColor" />Top {person.rank}</span>
                   <div className="person-overlay">
                     <h3>{person.name}</h3><p>{person.legalName}</p>
                     <strong>{person.metric} <small><TrendingUp size={10} />{person.delta}</small></strong>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
 
           <div className="rank-list" tabIndex={0} aria-label="Danh sách KOL, cuộn để xem thêm">
             {filteredPeople.map((person) => (
-              <div className="person-row" key={person.rank}>
+              <Link
+                href={`/nguoi-noi-tieng/${person.key || encodeURIComponent(person.name)}`}
+                className="person-row cursor-pointer"
+                key={person.rank}
+              >
                 <span className="row-rank">{person.rank}</span>
                 <DataImage src={person.image} fallback={fallbackPeople.find((item) => item.rank === person.rank)?.image || "/assets/kols/ivan.jpg"} alt={person.name} />
                 <div><strong>{person.name}</strong><span>{person.legalName}</span></div>
                 <p><small>Tương tác</small><b><TrendingUp size={12} />{person.metric}</b><em>{person.delta}</em></p>
-              </div>
+              </Link>
             ))}
             {filteredFeatured.length === 0 && filteredPeople.length === 0 && <div className="empty-search-notice">Không tìm thấy KOL phù hợp với &ldquo;{query}&rdquo;</div>}
           </div>

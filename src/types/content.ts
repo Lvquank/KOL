@@ -12,6 +12,7 @@ export type RankedPerson = {
   image: string;
   metric: string;
   delta: string;
+  key?: string;
 };
 
 export type RankedNetwork = {

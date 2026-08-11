@@ -16,6 +16,17 @@ const categories = [
   { key: "education", label: "Giáo dục" },
   { key: "entertainment", label: "Giải trí" },
   { key: "business_marketing", label: "Kinh doanh, Truyền thông & Marketing" },
+  { key: "economy_finance_investment", label: "Kinh tế, Tài chính & Đầu tư" },
+  { key: "beauty_fashion", label: "Làm đẹp & Thời trang" },
+  { key: "film_animation", label: "Phim & Hoạt hình" },
+  { key: "feng_shui", label: "Phong thủy" },
+  { key: "health", label: "Sức khỏe" },
+  { key: "sports", label: "Thể thao" },
+  { key: "news_current_affairs", label: "Tin tức & Thời sự" },
+  { key: "automotive", label: "Xe" },
+  { key: "music", label: "Âm nhạc" },
+  { key: "lifestyle_family", label: "Đời sống & Gia đình" },
+  { key: "food_beverage", label: "Ẩm thực & Đồ uống" },
 ] as const;
 
 export function RegistrationForm({ applicantType }: { applicantType: ApplicantType }) {
@@ -23,6 +34,8 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [categoryKeys, setCategoryKeys] = useState<string[]>([]);
   const [avatarFileName, setAvatarFileName] = useState("");
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [avatarFileError, setAvatarFileError] = useState("");
   const [channelDetailFileName, setChannelDetailFileName] = useState("");
   const [channelDetailFileError, setChannelDetailFileError] = useState("");
   const [uploadedChannels, setUploadedChannels] = useState<UploadedChannel[]>([]);
@@ -41,10 +54,17 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const rawChannelLinks = String(form.channelLinks ?? "");
   const channelLinks = rawChannelLinks.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   const normalizeUrl = (url: string) => url.toLowerCase().replace(/\/+$/, "");
-  const validChannelLinks = channelLinks.filter((url) => /^https?:\/\//.test(url) && !linkCheck.duplicateUrls.includes(normalizeUrl(url)));
+  const validChannelLinks = channelLinks.filter((url) => isValidChannelUrl(url) && !linkCheck.duplicateUrls.includes(normalizeUrl(url)));
   const validTwo = isOrganization ? Boolean(form.channelQuantity && form.channelManager && form.channelManagerPhone && channelDetailFileName && !channelDetailFileError && uploadedChannels.some((channel) => !channel.duplicate)) && !uploadedChannelChecking : Boolean(form.channelQuantity && form.channelManager && form.channelManagerPhone && validChannelLinks.length) && !linkCheck.checking;
   const selectedCategories = categories.filter((item) => categoryKeys.includes(item.key)).map((item) => item.label).join(", ");
   const toggleCategory = (key: string) => setCategoryKeys((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
+  const selectAvatar = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setAvatarFileError("Chỉ chấp nhận file ảnh."); return; }
+    if (file.size > 20 * 1024 * 1024) { setAvatarFileError("Dung lượng ảnh không được vượt quá 20MB."); return; }
+    setAvatarFileError(""); setAvatarFileName(file.name); setAvatarPreviewUrl(URL.createObjectURL(file));
+  };
+  useEffect(() => () => { if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl); }, [avatarPreviewUrl]);
   const inspectChannelDetailFile = async (file?: File) => {
     if (!file) return;
     setChannelDetailFileName(file.name);
@@ -58,7 +78,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
       const hasSttHeader = Boolean(headerRow);
       const channelNameColumn = headerRow?.findIndex((cell) => /tên.*kênh|tên kênh|channel name/i.test(String(cell ?? ""))) ?? -1;
       const channelMap = new Map<string, UploadedChannel>();
-      for (const row of allRows) for (const cell of row) { const url = String(cell ?? "").trim(); if (/(?:youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|fb\.com|twitter\.com|x\.com)/i.test(url)) { const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`; const nameFromColumn = channelNameColumn >= 0 ? String(row[channelNameColumn] ?? "").trim() : ""; const name = nameFromColumn || row.map((value) => String(value ?? "").trim()).find((value) => value && value !== url && !/^\d+$/.test(value) && !/stt|link|url|kênh/i.test(value)) || new URL(normalizedUrl).hostname.replace(/^www\./, ""); channelMap.set(normalizedUrl.toLowerCase().replace(/\/+$/, ""), { url: normalizedUrl, name, platform: getChannelPlatform(normalizedUrl), duplicate: false }); } }
+      for (const row of allRows) for (const cell of row) { const url = String(cell ?? "").trim(); const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`; if (isValidChannelUrl(normalizedUrl)) { const nameFromColumn = channelNameColumn >= 0 ? String(row[channelNameColumn] ?? "").trim() : ""; const name = nameFromColumn || row.map((value) => String(value ?? "").trim()).find((value) => value && value !== url && !/^\d+$/.test(value) && !/stt|link|url|kênh/i.test(value)) || new URL(normalizedUrl).hostname.replace(/^www\./, ""); channelMap.set(normalizedUrl.toLowerCase().replace(/\/+$/, ""), { url: normalizedUrl, name, platform: getChannelPlatform(normalizedUrl), duplicate: false }); } }
       const foundChannels = [...channelMap.values()].slice(0, 100);
       if (!hasSttHeader) { setUploadedChannels([]); setChannelDetailFileError("Không tìm thấy dòng tiêu đề (STT) trong file"); return; }
       if (!foundChannels.length) { setUploadedChannels([]); setChannelDetailFileError("File phải có ít nhất 1 kênh hợp lệ (youtube, tiktok, instagram, facebook, twitter)"); return; }
@@ -67,7 +87,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
     } catch { setChannelDetailFileError("Không thể đọc file Excel. Vui lòng dùng đúng file mẫu."); }
   };
   useEffect(() => {
-    const validUrls = rawChannelLinks.split(/\r?\n/).map((url) => url.trim()).filter((url) => /^https?:\/\//.test(url));
+    const validUrls = rawChannelLinks.split(/\r?\n/).map((url) => url.trim()).filter(isValidChannelUrl);
     if (validUrls.length === 0) { setLinkCheck({ checking: false, duplicateUrls: [] }); return; }
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -106,7 +126,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
 
     {step === 1 && <section className="application-card">
       <h1>Đăng ký thông tin</h1><p className="application-help">Điền đầy đủ thông tin bên dưới</p>
-      <div className="avatar-upload"><div className="avatar-placeholder">{avatarFileName ? avatarFileName.slice(0, 1).toUpperCase() : <UserRound size={30} />}</div><div className="avatar-copy"><strong>{isOrganization ? "Logo tổ chức" : "Ảnh đại diện"}</strong><span>{avatarFileName || "Ảnh dung lượng tối đa 20MB"}</span></div><label className="upload-button"><Upload size={16} />Tải ảnh lên<input type="file" accept="image/*" onChange={(event) => setAvatarFileName(event.target.files?.[0]?.name ?? "")} /></label></div>
+      <div className="avatar-upload"><div className={`avatar-placeholder ${avatarPreviewUrl ? "has-preview" : ""}`} style={avatarPreviewUrl ? { backgroundImage: `url("${avatarPreviewUrl}")` } : undefined}>{!avatarPreviewUrl && <UserRound size={30} />}</div><div className="avatar-copy"><strong>{isOrganization ? "Ảnh đại diện / Logo tổ chức" : "Ảnh đại diện"}</strong><span>Ảnh dung lượng tối đa 20MB</span></div><label className="upload-button"><Upload size={16} />Tải ảnh lên<input type="file" accept="image/*" onChange={(event) => selectAvatar(event.target.files?.[0])} /></label></div>{avatarFileError && <p className="avatar-upload-error">{avatarFileError}</p>}
       {isOrganization ? <><section className="application-contact application-identity"><h2>Thông tin định danh</h2><div className="application-fields"><Field label="Tên tổ chức / doanh nghiệp" required full value={String(form.name ?? "")} onChange={(value) => change("name", value)} placeholder="Tên đầy đủ của tổ chức" /><Field label="Số GCNĐKDN / GPHD / Quyết định thành lập" required full hint="Giấy chứng nhận ĐKDN hoặc Giấy phép kinh doanh hoặc Quyết định thành lập" value={String(form.businessLicenseNo ?? "")} onChange={(value) => change("businessLicenseNo", value)} placeholder="Nhập số giấy chứng nhận" /><Field label="Ngày cấp" required type="date" value={String(form.licenseIssuedAt ?? "")} onChange={(value) => change("licenseIssuedAt", value)} /><Field label="Cơ quan cấp" required value={String(form.licenseIssuedBy ?? "")} onChange={(value) => change("licenseIssuedBy", value)} placeholder="Tên cơ quan" /><Field label="Người chịu trách nhiệm trước pháp luật" required full value={String(form.legalRepresentative ?? "")} onChange={(value) => change("legalRepresentative", value)} placeholder="Họ và tên người đại diện" /></div></section><section className="application-contact application-contact-details"><h2>Thông tin liên hệ</h2><ContactFields form={form} change={change} /></section></> : <section className="application-contact"><h2>Thông tin liên hệ</h2><div className="application-fields"><Field label="Họ tên KOL/KOC" required full value={String(form.name ?? "")} onChange={(value) => change("name", value)} placeholder="Nhập họ và tên" /></div><ContactFields form={form} change={change} /></section>}
       {!isOrganization && <div className="application-registration-extras"><div className="application-multiselect"><span>Danh mục hoạt động</span><button type="button" onClick={() => setCategoryMenuOpen((open) => !open)}>{selectedCategories || "Chọn danh mục hoạt động"}<ChevronDown size={18} /></button>{categoryMenuOpen && <div className="category-options">{categories.map((category) => <label key={category.key}><input type="checkbox" checked={categoryKeys.includes(category.key)} onChange={() => toggleCategory(category.key)} />{category.label}</label>)}</div>}</div><label className="application-switch"><span>Đã học lớp bồi dưỡng nghiệp vụ</span><input type="checkbox" checked={Boolean(form.livestreamCertVerified)} onChange={(event) => change("livestreamCertVerified", event.target.checked)} /><i aria-hidden="true" /></label></div>}<Actions onBack={null} onNext={() => setStep(2)} disabled={!validOne} />
     </section>}
@@ -118,7 +138,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
         <Field label="Họ tên nhân sự quản lý nội dung" required value={String(form.channelManager ?? "")} onChange={(value) => change("channelManager", value)} placeholder="Người trực tiếp đăng bài" />
         <Field label="Số điện thoại nhân sự" required type="tel" value={String(form.channelManagerPhone ?? "")} onChange={(value) => change("channelManagerPhone", value)} placeholder="0xxx xxx xxx" />
         <label className="application-full channel-links"><span className="field-label">Danh sách link kênh <em>*</em></span><textarea value={String(form.channelLinks ?? "")} onChange={(event) => change("channelLinks", event.target.value)} placeholder={"Nhập mỗi link trên một dòng. Ví dụ:\nhttps://youtube.com/@tenkenh"} /><small>{linkCheck.checking ? "Đang kiểm tra..." : `${channelLinks.length} link đã nhập`}</small></label>
-        {!linkCheck.checking && channelLinks.length > 0 && <div className="channel-check-results"><p><span>{validChannelLinks.length} kênh hợp lệ</span>{linkCheck.duplicateUrls.length > 0 && <b>{linkCheck.duplicateUrls.length} kênh đã có chủ (sẽ bỏ qua)</b>}</p>{channelLinks.filter((url) => /^https?:\/\//.test(url)).map((url) => <ChannelCheckResult key={url} url={url} duplicate={linkCheck.duplicateUrls.includes(normalizeUrl(url))} />)}{linkCheck.error && <small className="link-check-error">{linkCheck.error}</small>}</div>}
+        {!linkCheck.checking && channelLinks.length > 0 && <div className="channel-check-results"><p><span>{validChannelLinks.length} kênh hợp lệ</span>{linkCheck.duplicateUrls.length > 0 && <b>{linkCheck.duplicateUrls.length} kênh đã có chủ (sẽ bỏ qua)</b>}</p>{channelLinks.filter(isValidChannelUrl).map((url) => <ChannelCheckResult key={url} url={url} duplicate={linkCheck.duplicateUrls.includes(normalizeUrl(url))} />)}{linkCheck.error && <small className="link-check-error">{linkCheck.error}</small>}</div>}
       </div></div><Actions onBack={() => setStep(1)} onNext={() => setStep(3)} disabled={!validTwo} />
     </section>)}
 
@@ -129,6 +149,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
 function ContactFields({ form, change }: { form: Record<string, string | boolean>; change: (key: string, value: string | boolean) => void }) { return <div className="application-fields"><Field label="Quốc tịch / Quốc gia" required value={String(form.nationality ?? "")} onChange={(value) => change("nationality", value)} /><Field label="Địa chỉ liên hệ" required full value={String(form.address ?? "")} onChange={(value) => change("address", value)} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" /><Field label="Số điện thoại" type="tel" value={String(form.phone ?? "")} onChange={(value) => change("phone", value)} placeholder="0xxx xxx xxx" /><Field label="Hộp thư điện tử" required type="email" value={String(form.email ?? "")} onChange={(value) => change("email", value)} placeholder="example@email.com" /><Field label="Số Zalo nhận cảnh báo vi phạm" required full type="tel" value={String(form.zalo ?? "")} onChange={(value) => change("zalo", value)} placeholder="0xxx xxx xxx" /></div>; }
 function Field({ label, required, full, hint, type = "text", value, onChange, placeholder }: { label: string; required?: boolean; full?: boolean; hint?: string; type?: string; value: string; onChange: (value: string) => void; placeholder?: string }) { return <label className={full ? "application-full" : ""}><span className="field-label">{label}{required && <em>*</em>}</span>{hint && <small className="field-hint">{hint}</small>}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label>; }
 function Actions({ onBack, onNext, disabled, label = "Tiếp theo" }: { onBack: (() => void) | null; onNext: () => void; disabled: boolean; label?: string }) { return <div className="application-actions">{onBack ? <button type="button" className="secondary" onClick={onBack}><ArrowLeft size={16} />Quay lại</button> : <Link href="/">Huỷ</Link>}<button type="button" disabled={disabled} onClick={onNext}>{label}<ArrowRight size={16} /></button></div>; }
+function isValidChannelUrl(value: string) { try { const url = new URL(value); const host = url.hostname.replace(/^www\./, "").toLowerCase(); const isSupported = ["youtube.com", "youtu.be", "tiktok.com", "instagram.com", "facebook.com", "fb.com", "twitter.com", "x.com"].some((domain) => host === domain || host.endsWith(`.${domain}`)); return ["http:", "https:"].includes(url.protocol) && isSupported && url.pathname.length > 1; } catch { return false; } }
 function getChannelPlatform(url: string) { return /youtube\.com|youtu\.be/i.test(url) ? "YOUTUBE" : /tiktok\.com/i.test(url) ? "TIKTOK" : /instagram\.com/i.test(url) ? "INSTAGRAM" : /facebook\.com|fb\.com/i.test(url) ? "FACEBOOK" : /twitter\.com|x\.com/i.test(url) ? "TWITTER" : "KHÁC"; }
 function UploadedChannelResult({ channel }: { channel: UploadedChannel }) { return <article className={`channel-check-result ${channel.duplicate ? "duplicate" : "valid"}`}><div className="channel-check-avatar"><UserRound size={20} /></div><span title={channel.url}>{channel.name}</span><b>{channel.platform}</b>{channel.duplicate ? <AlertTriangle size={18} /> : <Check size={18} />}{channel.duplicate && <p>Kênh này đã tồn tại trong hệ thống và thuộc về người dùng khác.</p>}</article>; }
 function ChannelCheckResult({ url, duplicate }: { url: string; duplicate: boolean }) { return <UploadedChannelResult channel={{ url, name: url, platform: getChannelPlatform(url), duplicate }} />; }

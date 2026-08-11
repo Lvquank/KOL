@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./kol_gov_vn.css";
 
 export const metadata: Metadata = {
   title: "KOL.GOV.VN — Bản tham chiếu local",

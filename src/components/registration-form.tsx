@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, Upload, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { API_BASE_URL } from "@/lib/api";
 
 type ApplicantType = "individual" | "organization";
 type UploadedChannel = { url: string; name: string; platform: string; duplicate: boolean };
@@ -83,7 +84,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
       if (!hasSttHeader) { setUploadedChannels([]); setChannelDetailFileError("Không tìm thấy dòng tiêu đề (STT) trong file"); return; }
       if (!foundChannels.length) { setUploadedChannels([]); setChannelDetailFileError("File phải có ít nhất 1 kênh hợp lệ (youtube, tiktok, instagram, facebook, twitter)"); return; }
       setChannelDetailFileError(""); setUploadedChannels(foundChannels); setUploadedChannelChecking(true);
-      try { const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1"}/registration/channel-links/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urls: foundChannels.map((channel) => channel.url) }) }); const data = await response.json() as { data?: { duplicateUrls?: string[] } }; const duplicates = new Set((data.data?.duplicateUrls ?? []).map((url) => url.toLowerCase().replace(/\/+$/, ""))); setUploadedChannels(foundChannels.map((channel) => ({ ...channel, duplicate: duplicates.has(channel.url.toLowerCase().replace(/\/+$/, "")) }))); } catch { setChannelDetailFileError("Không thể kiểm tra kênh trong file vào lúc này."); } finally { setUploadedChannelChecking(false); }
+      try { const response = await fetch(`${API_BASE_URL}/registration/channel-links/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urls: foundChannels.map((channel) => channel.url) }) }); const data = await response.json() as { data?: { duplicateUrls?: string[] } }; const duplicates = new Set((data.data?.duplicateUrls ?? []).map((url) => url.toLowerCase().replace(/\/+$/, ""))); setUploadedChannels(foundChannels.map((channel) => ({ ...channel, duplicate: duplicates.has(channel.url.toLowerCase().replace(/\/+$/, "")) }))); } catch { setChannelDetailFileError("Không thể kiểm tra kênh trong file vào lúc này."); } finally { setUploadedChannelChecking(false); }
     } catch { setChannelDetailFileError("Không thể đọc file Excel. Vui lòng dùng đúng file mẫu."); }
   };
   useEffect(() => {
@@ -93,7 +94,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
     const timer = window.setTimeout(async () => {
       setLinkCheck({ checking: true, duplicateUrls: [] });
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1"}/registration/channel-links/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urls: validUrls }), signal: controller.signal });
+        const response = await fetch(`${API_BASE_URL}/registration/channel-links/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urls: validUrls }), signal: controller.signal });
         const data = await response.json() as { data?: { duplicateUrls?: string[] }; message?: string };
         if (!response.ok) throw new Error(data.message ?? "Không thể kiểm tra link.");
         setLinkCheck({ checking: false, duplicateUrls: data.data?.duplicateUrls ?? [] });
@@ -107,7 +108,7 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const submit = async () => {
     setResult({ loading: true });
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1"}/registration/applications`, {
+      const response = await fetch(`${API_BASE_URL}/registration/applications`, {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ applicantType, profile: { name: form.name, nationality: form.nationality, address: form.address, phone: form.phone, email: form.email, zalo: form.zalo, avatarFileName, activityCategories: categoryKeys, livestreamCertVerified: form.livestreamCertVerified, businessLicenseNo: form.businessLicenseNo, licenseIssuedAt: form.licenseIssuedAt, licenseIssuedBy: form.licenseIssuedBy, legalRepresentative: form.legalRepresentative, channelQuantity: form.channelQuantity, channelManager: form.channelManager, channelManagerPhone: form.channelManagerPhone, channelDetailFileName, whiteListRequestFileName }, channels: isOrganization ? [] : validChannelLinks.map((url) => ({ platform: "Kênh nội dung", name: form.channelManager, url })), declaration: { accuracyConfirmed: form.accuracyConfirmed, termsConfirmed: form.termsConfirmed } }),
       });

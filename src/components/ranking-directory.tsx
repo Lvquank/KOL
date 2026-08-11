@@ -124,6 +124,45 @@ function Sparkline({ row }: { row: DirectoryRow }) {
   );
 }
 
+function DirectoryEntityLink({
+  row,
+  kind,
+  displayValue,
+  positive,
+}: {
+  row: DirectoryRow;
+  kind: DirectoryKind;
+  displayValue: number;
+  positive: boolean;
+}) {
+  const isOwner = kind === "owner";
+  const detailId = isOwner ? row.entity?.sourceId || row.mcn_source_id : row.entity?.key || row.influencer_key;
+  const href = detailId
+    ? isOwner
+      ? `/mcn/${encodeURIComponent(detailId)}`
+      : `/nguoi-noi-tieng/${encodeURIComponent(detailId)}`
+    : null;
+  const content = (
+    <>
+      <DirectoryAvatar row={row} kind={kind} />
+      <div className="directory-entity-copy">
+        <strong>{isOwner ? row.name : row.entity?.nickName || row.subtitle || row.name}</strong>
+        <span>{isOwner ? `${row.entity?.totalChannels || 0} kênh · ${row.entity?.totalKols || 0} KOL` : `(${row.entity?.name || row.name})`}</span>
+        {!isOwner && row.entity?.identityVerified && <small className="verified-label"><CheckCircle2 size={11} />Đã xác thực</small>}
+        <div className="directory-mobile-stats"><b>{formatMetric(displayValue)}</b><em className={positive ? "positive" : "negative"}>{formatCompactMetric(row.displayGrowth)} · {formatPercent(row.growth_rate)}</em></div>
+      </div>
+    </>
+  );
+
+  return href ? (
+    <Link href={href} className="directory-entity" aria-label={`Xem chi tiết ${row.name}`}>
+      {content}
+    </Link>
+  ) : (
+    <div className="directory-entity">{content}</div>
+  );
+}
+
 function deriveRows(rows: GrowthRanking[], metric: Metric): DirectoryRow[] {
   const derived = rows.map((row) => {
     const variation = metric === "total" ? 1 : 0.86 + (stableHash(`${row.name}-${metric}`) % 29) / 100;
@@ -239,15 +278,7 @@ export function RankingDirectory({ kind }: { kind: DirectoryKind }) {
                 return <tr key={row.snapshot_key} style={animationStyle}>
                   <td><span className={`directory-rank rank-${row.directoryRank}`}>{row.directoryRank}</span></td>
                   <td>
-                    <div className="directory-entity">
-                      <DirectoryAvatar row={row} kind={kind} />
-                      <div className="directory-entity-copy">
-                        <strong>{isOwner ? row.name : row.entity?.nickName || row.subtitle || row.name}</strong>
-                        <span>{isOwner ? `${row.entity?.totalChannels || 0} kênh · ${row.entity?.totalKols || 0} KOL` : `(${row.entity?.name || row.name})`}</span>
-                        {!isOwner && row.entity?.identityVerified && <small className="verified-label"><CheckCircle2 size={11} />Đã xác thực</small>}
-                        <div className="directory-mobile-stats"><b>{formatMetric(displayValue)}</b><em className={positive ? "positive" : "negative"}>{formatCompactMetric(row.displayGrowth)} · {formatPercent(row.growth_rate)}</em></div>
-                      </div>
-                    </div>
+                    <DirectoryEntityLink row={row} kind={kind} displayValue={displayValue} positive={positive} />
                   </td>
                   <td className="directory-platform-column"><PlatformBadges row={row} showCounts={isOwner} /></td>
                   <td className="directory-metric-column"><strong>{formatMetric(displayValue)}</strong></td>

@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "@/lib/api";
+
 export interface ApiNewsCategory {
   key: string;
   name: string;
@@ -59,7 +61,7 @@ export async function fetchApiCategories(): Promise<ApiCategoryItem[]> {
   try {
     const fetchOptions: RequestInit =
       typeof window === "undefined" ? { next: { revalidate: 60 } } as RequestInit : { cache: "no-store" };
-    const res = await fetch("http://127.0.0.1:4000/api/v1/news/categories", fetchOptions);
+    const res = await fetch(`${API_BASE_URL}/news/categories`, fetchOptions);
     if (!res.ok) {
       throw new Error(`API error: ${res.status}`);
     }
@@ -79,7 +81,7 @@ export async function fetchApiNews(category?: string): Promise<ApiNewsItem[]> {
     const fetchOptions: RequestInit =
       typeof window === "undefined" ? { next: { revalidate: 60 } } as RequestInit : { cache: "no-store" };
     
-    const url = "http://127.0.0.1:4000/api/v1/news?limit=100";
+    const url = `${API_BASE_URL}/news?limit=100`;
     const res = await fetch(url, fetchOptions);
     if (!res.ok) {
       throw new Error(`API error: ${res.status}`);
@@ -106,7 +108,7 @@ export async function fetchNewsDetailBySlug(slug: string): Promise<ApiNewsItem |
   try {
     const fetchOptions: RequestInit =
       typeof window === "undefined" ? { next: { revalidate: 60 } } as RequestInit : { cache: "no-store" };
-    const res = await fetch(`http://127.0.0.1:4000/api/v1/news/${encodeURIComponent(slug)}`, fetchOptions);
+    const res = await fetch(`${API_BASE_URL}/news/${encodeURIComponent(slug)}`, fetchOptions);
     if (!res.ok) {
       return null;
     }

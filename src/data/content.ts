@@ -46,27 +46,27 @@ export const peopleRows: RankedPerson[] = [
 ];
 
 export const networkRows: RankedNetwork[] = [
-  { rank: 1, name: "VCCorp", detail: "34 kênh · 0 KOL", image: "/assets/mcn/vccorp.webp", metric: "+56 Tr", delta: "+24.9%" },
-  { rank: 2, name: "Viettel", detail: "56 kênh · 1 KOL", image: "/assets/mcn/viettel.webp", metric: "+13.7 Tr", delta: "+7.7%" },
-  { rank: 3, name: "Zeit Media", detail: "12 kênh · 0 KOL", image: "/assets/mcn/zeit.webp", metric: "+12.7 Tr", delta: "+26.1%" },
-  { rank: 4, name: "VieNETWORK", detail: "71 kênh · 0 KOL", image: "/assets/mcn/vie-network.webp", metric: "+4.3 Tr", delta: "+1.5%" },
-  { rank: 5, name: "NetSpace", detail: "62 kênh · 10 KOL", image: "/assets/mcn/netspace.webp", metric: "+2.8 Tr", delta: "+1.2%" },
-  { rank: 6, name: "TVH Media", detail: "27 kênh · 28 KOL", image: "/assets/mcn/tvh.webp", metric: "+2.4 Tr", delta: "+0.8%" },
-  { rank: 7, name: "VietNamNet", detail: "4 kênh · 0 KOL", image: "/assets/mcn/vietnamnet.webp", metric: "+1.2 Tr", delta: "+18.4%" },
-  { rank: 8, name: "Radiant VN", detail: "13 kênh · 0 KOL", image: "/assets/mcn/radiant.webp", metric: "+645,389", delta: "+2.0%" },
-  { rank: 9, name: "Trung tâm Nội Dung Số", detail: "26 kênh · 1 KOL", image: "/assets/mcn/noi-dung-so.webp", metric: "+611,677", delta: "+0.5%" },
-  { rank: 10, name: "Vietnam Music Award", detail: "23 kênh · 0 KOL", image: "/assets/mcn/vma.webp", metric: "+96,735", delta: "+0.4%" }
+  { rank: 1, name: "VCCorp", detail: "34 kênh · 0 KOL", image: "/assets/mcn/vccorp.webp", metric: "+56 Tr", delta: "+24.9%", sourceId: "21" },
+  { rank: 2, name: "Viettel", detail: "56 kênh · 1 KOL", image: "/assets/mcn/viettel.webp", metric: "+13.7 Tr", delta: "+7.7%", sourceId: "23" },
+  { rank: 3, name: "Zeit Media", detail: "12 kênh · 0 KOL", image: "/assets/mcn/zeit.webp", metric: "+12.7 Tr", delta: "+26.1%", sourceId: "42" },
+  { rank: 4, name: "VieNETWORK", detail: "71 kênh · 0 KOL", image: "/assets/mcn/vie-network.webp", metric: "+4.3 Tr", delta: "+1.5%", sourceId: "10" },
+  { rank: 5, name: "NetSpace", detail: "62 kênh · 10 KOL", image: "/assets/mcn/netspace.webp", metric: "+2.8 Tr", delta: "+1.2%", sourceId: "24" },
+  { rank: 6, name: "TVH Media", detail: "27 kênh · 28 KOL", image: "/assets/mcn/tvh.webp", metric: "+2.4 Tr", delta: "+0.8%", sourceId: "138" },
+  { rank: 7, name: "VietNamNet", detail: "4 kênh · 0 KOL", image: "/assets/mcn/vietnamnet.webp", metric: "+1.2 Tr", delta: "+18.4%", sourceId: "25" },
+  { rank: 8, name: "Radiant VN", detail: "13 kênh · 0 KOL", image: "/assets/mcn/radiant.webp", metric: "+645,389", delta: "+2.0%", sourceId: "27" },
+  { rank: 9, name: "Trung tâm Nội Dung Số", detail: "26 kênh · 1 KOL", image: "/assets/mcn/noi-dung-so.webp", metric: "+611,677", delta: "+0.5%", sourceId: "17" },
+  { rank: 10, name: "Vietnam Music Award", detail: "23 kênh · 0 KOL", image: "/assets/mcn/vma.webp", metric: "+96,735", delta: "+0.4%", sourceId: "15" }
 ];
 
 export const socialItems: SocialItem[] = [
-  { rank: 1, name: "Sơn Tùng M-TP", score: "280.629", image: "/assets/social/son-tung.jpg" },
-  { rank: 2, name: "Hoa Hậu Hương Giang", score: "109.486", image: "/assets/social/huong-giang.jpg" },
-  { rank: 3, name: "HIEUTHUHAI", score: "32.691", image: "/assets/social/hieuthuhai.jpg" },
-  { rank: 4, name: "Binz", score: "28.823", image: "/assets/social/binz.jpg" },
-  { rank: 5, name: "SOOBIN", score: "27.023", image: "/assets/social/soobin.jpg" },
-  { rank: 6, name: "RHYDER", score: "23.370", image: "/assets/social/rhyder.jpg" },
-  { rank: 7, name: "Nguyễn Văn Chung", score: "23.265", image: "/assets/social/nguyen-van-chung.jpg" },
-  { rank: 8, name: "Quang Hùng MasterD", score: "23.094", image: "/assets/social/quang-hung.jpg" },
-  { rank: 9, name: "Bùi Công Nam", score: "22.770", image: "/assets/social/bui-cong-nam.jpg" },
-  { rank: 10, name: "CongB", score: "20.761", image: "/assets/social/congb.jpg" }
+  { rank: 1, name: "Sơn Tùng M-TP", score: "280.629", image: "/assets/social/son-tung.jpg", key: "kol_11b1aa738c223b4fe065ab4f1cee4feb" },
+  { rank: 2, name: "Hoa Hậu Hương Giang", score: "109.486", image: "/assets/social/huong-giang.jpg", key: "kol_38b557f6fb1509b05953e320b2808f52" },
+  { rank: 3, name: "HIEUTHUHAI", score: "32.691", image: "/assets/social/hieuthuhai.jpg", key: "kol_7dc50e76cc5e2d1a0703dbe2b9e3359c" },
+  { rank: 4, name: "Binz", score: "28.823", image: "/assets/social/binz.jpg", key: "kol_e29cc8bba059264d907601c18586d6de" },
+  { rank: 5, name: "SOOBIN", score: "27.023", image: "/assets/social/soobin.jpg", key: "kol_f04a33656a2dd1bfc8672b5c59bae068" },
+  { rank: 6, name: "RHYDER", score: "23.370", image: "/assets/social/rhyder.jpg", key: "kol_037948007cfd5701f69c659f96113e78" },
+  { rank: 7, name: "Nguyễn Văn Chung", score: "23.265", image: "/assets/social/nguyen-van-chung.jpg", key: "kol_07df1da5da1f059aebc8c8948911f880" },
+  { rank: 8, name: "Quang Hùng MasterD", score: "23.094", image: "/assets/social/quang-hung.jpg", key: "kol_8b258d74c3c80bd4760f4d3c17a27eeb" },
+  { rank: 9, name: "Bùi Công Nam", score: "23.265", image: "/assets/social/bui-cong-nam.jpg", key: "kol_bc1588063e01c52c72313c776b90cf02" },
+  { rank: 10, name: "CongB", score: "20.761", image: "/assets/social/congb.jpg", key: "kol_3c459f0612ba43ff6fe14d92e6b1234f" }
 ];

@@ -52,7 +52,8 @@ function mapPeople(rows: GrowthRanking[]): RankedPerson[] {
     legalName: row.entity?.name || row.name,
     image: row.avatar_url || fallbackPeople.find((person) => person.rank === row.rank)?.image || "/assets/kols/ivan.jpg",
     metric: formatCompactMetric(row.growth_current),
-    delta: formatPercent(row.growth_rate)
+    delta: formatPercent(row.growth_rate),
+    key: row.entity?.key || row.influencer_key || undefined
   }));
 }
 
@@ -67,7 +68,8 @@ function mapNetworks(rows: GrowthRanking[]): RankedNetwork[] {
       detail: `${channels} kênh · ${kols} KOL`,
       image: row.avatar_url || fallback?.image || "/assets/mcn/vccorp.webp",
       metric: formatCompactMetric(row.growth_current),
-      delta: formatPercent(row.growth_rate)
+      delta: formatPercent(row.growth_rate),
+      sourceId: row.entity?.sourceId || row.mcn_source_id || fallback?.sourceId
     };
   });
 }
@@ -236,12 +238,16 @@ function RankingsContent() {
           </p>
           <div className="network-list" tabIndex={0} aria-label="Danh sách MCN, cuộn để xem thêm">
             {filteredNetworks.map((network) => (
-              <div className={`network-row network-${network.rank}`} key={network.rank}>
+              <Link
+                href={`/mcn/${encodeURIComponent(network.sourceId || network.name)}`}
+                className={`network-row network-${network.rank}`}
+                key={network.rank}
+              >
                 <span>{String(network.rank).padStart(2, "0")}</span>
                 <DataImage src={network.image} fallback={networkRows.find((item) => item.rank === network.rank)?.image || "/assets/mcn/vccorp.webp"} alt={network.name} />
                 <div><strong>{network.name}</strong><small>{network.detail}</small></div>
                 <p><small>Tương tác</small><b><TrendingUp size={12} />{network.metric}</b><em>{network.delta}</em></p>
-              </div>
+              </Link>
             ))}
             {filteredNetworks.length === 0 && <div className="empty-search-notice">Không tìm thấy MCN phù hợp với &ldquo;{query}&rdquo;</div>}
           </div>

@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { CalendarDays, Megaphone, TvMinimal, Users, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { socialItems } from "@/data/content";
 import {
@@ -96,6 +97,7 @@ export function SocialIndex() {
         score: scoreLabel(item.score),
         scoreValue: Number(item.score) || 0,
         image: item.image_url,
+        influencerKey: item.influencer_key,
         fallback: socialItems.find((fallbackItem) => fallbackItem.rank === item.rank)?.image || "/assets/social/son-tung.jpg"
       }));
     }
@@ -103,6 +105,7 @@ export function SocialIndex() {
       ...item,
       scoreValue: Number(String(item.score).replace(/\./g, "")) || 0,
       image: item.image,
+      influencerKey: item.key || null,
       fallback: item.image
     }));
   }, [rankings]);
@@ -157,8 +160,8 @@ export function SocialIndex() {
                     "--bar-height": `${height}%`,
                     "--bar-delay": `${index * 70}ms`
                   } as CSSProperties;
-                  return (
-                    <li key={`${tab}-${item.rank}`} style={chartStyle}>
+                  const itemContent = (
+                    <>
                       <div className="social-bar-stage">
                         <div className="social-bar-meta">
                           <SocialAvatar src={item.image} fallback={item.fallback} name={item.name} />
@@ -167,6 +170,20 @@ export function SocialIndex() {
                         <div className="social-bar" aria-hidden="true" />
                       </div>
                       <strong title={item.name}>{item.name}</strong>
+                    </>
+                  );
+                  const detailHref = tab === "influencer" && item.influencerKey
+                    ? `/nguoi-noi-tieng/${encodeURIComponent(item.influencerKey)}`
+                    : null;
+                  return (
+                    <li key={`${tab}-${item.rank}`} style={chartStyle}>
+                      {detailHref ? (
+                        <Link className="social-chart-item-link" href={detailHref} aria-label={`Xem chi tiết ${item.name}`}>
+                          {itemContent}
+                        </Link>
+                      ) : (
+                        <div className="social-chart-item-link">{itemContent}</div>
+                      )}
                     </li>
                   );
                 })}

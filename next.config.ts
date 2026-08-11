@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  distDir: ".next-local",
+  distDir: process.env.NEXT_DIST_DIR || ".next-local",
   output: "standalone",
   images: {
     remotePatterns: [

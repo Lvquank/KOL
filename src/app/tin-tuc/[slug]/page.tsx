@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { fetchNewsDetailBySlug, fetchApiNews, formatNewsDate, type ApiNewsItem } from "@/lib/api-news";
+import { findLocalNewsPost } from "@/lib/local-news";
 
 const documentSlug = "bo-quy-tac-ung-xu-van-hoa-tren-moi-truong-so";
 const introductionSlug = "gioi-thieu-tong-quan-ve-cong-thong-tin-kolgovvn";
@@ -56,7 +57,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   // Try fetching dynamic news detail from API first
   let article: ApiNewsItem | null = await fetchNewsDetailBySlug(slug);
 
-  // If not returned by API (or API error), check static fallback routes
+  // If not returned by API (or API error), check static and scraped local fallbacks.
   if (!article) {
     if (slug === documentSlug) {
       article = {
@@ -87,6 +88,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         tags: [],
       };
     } else {
+      article = await findLocalNewsPost(slug);
+    }
+
+    if (!article) {
       notFound();
     }
   }

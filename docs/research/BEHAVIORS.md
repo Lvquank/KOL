@@ -11,6 +11,7 @@
 - Keyboard: focused buttons receive a visible browser-style outline. Clone uses a 3 px translucent orange focus ring.
 - Registration/report: source contains selectable identity types and a report form. Per the sensitive-target rule these controls are visibly disabled in the clone.
 - Reduced motion: marquee and timed carousel stop under `prefers-reduced-motion: reduce`.
+- News archive pagination: the selected page is encoded as `?page=N`; browser Back/Forward restores the same archive page after visiting an article. Page 1 omits the query parameter.
 
 ## Known source dynamics
 

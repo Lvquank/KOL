@@ -121,6 +121,7 @@ export function AdminEntityEditor({ type, data, token, onClose, onSaved }: {
       : {
           name: form.name,
           subtitle: form.subtitle,
+          identityVerified: form.identityVerified,
           ...(avatarChanged ? { avatarUrl: form.avatarUrl } : {}),
           platforms: form.platforms.split(",").map((item) => item.trim()).filter(Boolean),
           totalChannels: Number(form.totalChannels),
@@ -174,7 +175,10 @@ export function AdminEntityEditor({ type, data, token, onClose, onSaved }: {
               <label><span>Biệt danh</span><input value={form.nickName} maxLength={200} onChange={(event) => update("nickName", event.target.value)} /></label>
               <label><span>Giới tính</span><input value={form.gender} maxLength={50} onChange={(event) => update("gender", event.target.value)} placeholder="Nam, Nữ hoặc giá trị khác" /></label>
               <label className="admin-entity-edit-wide"><span>Đường dẫn nguồn *</span><input type="url" value={form.sourceUrl} onChange={(event) => update("sourceUrl", event.target.value)} required /></label>
-              <label className="admin-entity-edit-check admin-entity-edit-wide"><input type="checkbox" checked={form.identityVerified} onChange={(event) => update("identityVerified", event.target.checked)} /><span>Đã xác minh danh tính KOL</span></label>
+              <label className="admin-entity-edit-check admin-entity-edit-wide">
+                <input type="checkbox" checked={form.identityVerified} onChange={(event) => update("identityVerified", event.target.checked)} />
+                <span><strong>Đã xác minh (Ẩn khỏi frontend)</strong> — Tích chọn nếu muốn ẩn KOL này khỏi giao diện người dùng công khai. Bỏ chọn để "Đang hiển thị".</span>
+              </label>
             </>
           ) : (
             <>
@@ -182,6 +186,10 @@ export function AdminEntityEditor({ type, data, token, onClose, onSaved }: {
               <label className="admin-entity-edit-wide"><span>Nền tảng</span><input value={form.platforms} onChange={(event) => update("platforms", event.target.value)} placeholder="YouTube, TikTok, Facebook" /><small>Phân cách bằng dấu phẩy.</small></label>
               <label><span>Tổng số kênh</span><input type="number" min="0" max="1000000" value={form.totalChannels} onChange={(event) => update("totalChannels", event.target.value)} required /></label>
               <label><span>Tổng số KOL</span><input type="number" min="0" max="1000000" value={form.totalKols} onChange={(event) => update("totalKols", event.target.value)} required /></label>
+              <label className="admin-entity-edit-check admin-entity-edit-wide">
+                <input type="checkbox" checked={form.identityVerified} onChange={(event) => update("identityVerified", event.target.checked)} />
+                <span><strong>Đã xác minh (Ẩn khỏi frontend)</strong> — Tích chọn nếu muốn ẩn MCN này khỏi giao diện người dùng công khai. Bỏ chọn để "Đang hiển thị".</span>
+              </label>
             </>
           )}
 

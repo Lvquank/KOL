@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { fetchNewsDetailBySlug, fetchApiNews, formatNewsDate, type ApiNewsItem } from "@/lib/api-news";
-import { findLocalNewsPost } from "@/lib/local-news";
 
 const documentSlug = "bo-quy-tac-ung-xu-van-hoa-tren-moi-truong-so";
 const introductionSlug = "gioi-thieu-tong-quan-ve-cong-thong-tin-kolgovvn";
@@ -54,46 +53,11 @@ function IntroductionContent() {
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // Try fetching dynamic news detail from API first
-  let article: ApiNewsItem | null = await fetchNewsDetailBySlug(slug);
+  // Fetch dynamic news detail directly from database via API
+  const article: ApiNewsItem | null = await fetchNewsDetailBySlug(slug);
 
-  // If not returned by API (or API error), check static and scraped local fallbacks.
   if (!article) {
-    if (slug === documentSlug) {
-      article = {
-        slug: documentSlug,
-        source_url: `https://kol.gov.vn/tin-tuc/${documentSlug}`,
-        category: "Hoạt động cục",
-        title: "BỘ QUY TẮC ỨNG XỬ VĂN HOÁ TRÊN MÔI TRƯỜNG SỐ",
-        excerpt: "Các khuyến nghị góp phần xây dựng không gian số an toàn, lành mạnh và có trách nhiệm.",
-        published_date: "2026-07-16T00:00:00.000Z",
-        reading_minutes: 1,
-        image_url: "/assets/news/bo-quy-tac.webp",
-        scraped_at: "",
-        categories: [{ key: "doc", name: "Hoạt động cục" }],
-        tags: [],
-      };
-    } else if (slug === introductionSlug) {
-      article = {
-        slug: introductionSlug,
-        source_url: `https://kol.gov.vn/tin-tuc/${introductionSlug}`,
-        category: "Giới thiệu",
-        title: "GIỚI THIỆU TỔNG QUAN VỀ CỔNG THÔNG TIN KOL.GOV.VN",
-        excerpt: "Giới thiệu tổng quan nền tảng thông tin chính thống do Cục PTTH&TTĐT xây dựng.",
-        published_date: "2026-07-14T00:00:00.000Z",
-        reading_minutes: 2,
-        image_url: "/assets/news/gioi-thieu-hero.webp",
-        scraped_at: "",
-        categories: [{ key: "intro", name: "Giới thiệu" }],
-        tags: [],
-      };
-    } else {
-      article = await findLocalNewsPost(slug);
-    }
-
-    if (!article) {
-      notFound();
-    }
+    notFound();
   }
 
   // Fetch all news for sidebar & related items

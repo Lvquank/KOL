@@ -4,7 +4,7 @@ import { API_BASE_URL } from "@/lib/api";
 import { normalizeMediaUrl } from "@/lib/api-influencer";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { Activity, BarChart2, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, FileText, Globe, Heart, Pencil, Plus, Search, ShieldCheck, Trash2, User, UserCheck, Users, X } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, FileText, Globe, Heart, Info, Pencil, Plus, Search, ShieldCheck, Trash2, User, UserCheck, Users, X } from "lucide-react";
 import { AdminEntityEditor } from "./admin-entity-editor";
 
 const apiUrl = API_BASE_URL;
@@ -123,9 +123,9 @@ function DetailPanel({ title, data, onClose }: { title: string; data: Record<str
             <div className="admin-detail-profile-title">
               <h2>{name}</h2>
               {verified ? (
-                <span className="admin-status approved"><CheckCircle2 size={12} /> Đã xác minh</span>
+                <span className="admin-status in_review"><ShieldCheck size={12} /> Đã xác minh (Ẩn khỏi frontend)</span>
               ) : (
-                <span className="admin-status in_review"><ShieldCheck size={12} /> Đang hiển thị</span>
+                <span className="admin-status approved"><CheckCircle2 size={12} /> Đang hiển thị</span>
               )}
             </div>
             {sub && <p className="admin-detail-sub">{sub}</p>}
@@ -286,7 +286,74 @@ function NewsDetail({ item, onClose }: { item: News; onClose: () => void }) {
   );
 }
 
-export function AdminEntityManager({ type, token }: { type: "kols" | "mcns"; token: string | null }) {
+type ConfirmActionTarget = {
+  id: string;
+  name: string;
+  label: string;
+  actionType: "hide" | "show" | "delete";
+  title: string;
+  message: string;
+  note: string;
+  confirmLabel: string;
+  confirmStyle: "danger" | "warning" | "primary";
+  onConfirm: () => Promise<void>;
+};
+
+function ConfirmActionModal({
+  target,
+  loading,
+  onClose,
+}: {
+  target: ConfirmActionTarget;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="admin-news-modal" role="dialog" aria-modal="true" onMouseDown={loading ? undefined : onClose}>
+      <div className="admin-confirm-dialog" onMouseDown={(e) => e.stopPropagation()}>
+        <button type="button" className="admin-detail-close" onClick={onClose} disabled={loading} aria-label="Đóng">
+          <X size={18} />
+        </button>
+        <div className={`admin-confirm-icon-wrap ${target.actionType}`}>
+          {target.actionType === "hide" ? (
+            <EyeOff size={28} />
+          ) : target.actionType === "show" ? (
+            <Globe size={28} />
+          ) : (
+            <AlertTriangle size={28} />
+          )}
+        </div>
+        <h3>{target.title}</h3>
+        <p className="admin-confirm-text">
+          {target.message}
+        </p>
+        <p className="admin-confirm-warning">
+          {target.note}
+        </p>
+        <div className="admin-confirm-actions">
+          <button
+            type="button"
+            className="admin-btn-secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Hủy bỏ
+          </button>
+          <button
+            type="button"
+            className={`admin-btn-${target.confirmStyle}`}
+            onClick={target.onConfirm}
+            disabled={loading}
+          >
+            {loading ? "Đang xử lý..." : target.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminEntityManager({ type, token, canDelete: _canDelete }: { type: "kols" | "mcns"; token: string | null; canDelete?: boolean }) {
   const [items, setItems] = useState<Entity[]>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -294,6 +361,8 @@ export function AdminEntityManager({ type, token }: { type: "kols" | "mcns"; tok
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<ConfirmActionTarget | null>(null);
   const [message, setMessage] = useState("");
   const label = type === "kols" ? "KOL" : "MCN";
   const endpoint = type === "kols" ? "influencers" : "mcns";
@@ -301,7 +370,7 @@ export function AdminEntityManager({ type, token }: { type: "kols" | "mcns"; tok
   const load = useCallback(() => {
     const timer = window.setTimeout(() => {
       setLoading(true);
-      fetch(`${apiUrl}/${endpoint}?limit=20&page=${page}&search=${encodeURIComponent(query)}`)
+      fetch(`${apiUrl}/${endpoint}?limit=20&page=${page}&search=${encodeURIComponent(query)}&verified=all`)
         .then((response) => response.json())
         .then((payload) => { setItems(payload.data ?? []); setMeta(payload.pagination ?? emptyPage); })
         .catch(() => { setItems([]); setMeta(emptyPage); })
@@ -336,31 +405,344 @@ export function AdminEntityManager({ type, token }: { type: "kols" | "mcns"; tok
     setEditing((data?.data ?? data) as Record<string, unknown>);
   };
 
+  const executeToggleVisibility = async (item: Entity) => {
+    const id = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
+    if (!id) return;
+    if (!token) {
+      setMessage("Phiên đăng nhập quản trị đã hết hạn.");
+      setPendingAction(null);
+      return;
+    }
+
+    setTogglingId(id);
+    setMessage("");
+    try {
+      const response = await fetch(`${apiUrl}/admin/${endpoint}/${encodeURIComponent(id)}/toggle-visibility`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json().catch(() => null) as { data?: { identityVerified?: boolean }; message?: string } | null;
+      if (!response.ok) throw new Error(payload?.message ?? `Không thể thay đổi trạng thái ${label}.`);
+      
+      const newVerified = payload?.data?.identityVerified;
+      setSelected(null);
+      setEditing(null);
+      setPendingAction(null);
+      setMessage(newVerified ? `Đã ẩn ${label} “${item.name}” (trạng thái: Đã xác minh).` : `Đã hiển thị ${label} “${item.name}” lên frontend (trạng thái: Đang hiển thị).`);
+      load();
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const promptToggleVisibility = (item: Entity) => {
+    const id = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
+    if (!id) return;
+    const isCurrentlyHidden = Boolean(item.identity_verified);
+
+    if (isCurrentlyHidden) {
+      // Prompt to SHOW on frontend
+      setPendingAction({
+        id,
+        name: item.name,
+        label,
+        actionType: "show",
+        title: `Hiển thị lại ${label} lên frontend`,
+        message: `Bạn có muốn hiển thị lại ${label.toLowerCase()} “${item.name}” trên frontend không?`,
+        note: `💡 Trạng thái sẽ chuyển thành "Đang hiển thị" và mục này sẽ xuất hiện trở lại trên giao diện công khai.`,
+        confirmLabel: "Xác nhận hiển thị",
+        confirmStyle: "primary",
+        onConfirm: () => executeToggleVisibility(item),
+      });
+    } else {
+      // Prompt to HIDE from frontend
+      setPendingAction({
+        id,
+        name: item.name,
+        label,
+        actionType: "hide",
+        title: `Ẩn ${label} khỏi frontend`,
+        message: `Bạn có chắc chắn muốn ẩn ${label.toLowerCase()} “${item.name}” khỏi frontend không?`,
+        note: `⚠️ Trạng thái sẽ chuyển thành "Đã xác minh" và mục này sẽ không còn hiển thị trên giao diện người dùng công khai.`,
+        confirmLabel: "Xác nhận ẩn",
+        confirmStyle: "warning",
+        onConfirm: () => executeToggleVisibility(item),
+      });
+    }
+  };
+
   return (
     <section className="admin-list-card admin-manager">
-      <div className="admin-list-card-heading"><div><h2>Quản lý {label}</h2><p>Tra cứu dữ liệu {label} đang công khai trên hệ thống. Bấm một dòng để xem chi tiết.</p></div><span>{loading ? "Đang tải..." : `${meta.total} bản ghi`}</span></div>
-      <label className="admin-manager-search"><Search size={17} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Tìm tên ${label}`} /></label>
+      <div className="admin-list-card-heading">
+        <div>
+          <h2>Quản lý {label}</h2>
+          <p>Quản lý và điều chỉnh ẩn/hiển thị {label} trên hệ thống. Bấm một dòng để xem chi tiết.</p>
+        </div>
+        <span>{loading ? "Đang tải..." : `${meta.total} bản ghi`}</span>
+      </div>
+      <label className="admin-manager-search">
+        <Search size={17} />
+        <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Tìm tên ${label}`} />
+      </label>
       {message ? <p className="admin-news-message">{message}</p> : null}
-      <div className="admin-table-wrap"><table><thead><tr><th>{label}</th><th>Thông tin</th><th>Kênh</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-        {items.map((item) => <tr key={item.influencer_key ?? item.source_id} onClick={() => open(item)}><td><strong>{item.name}</strong><small>{item.nick_name || item.subtitle || "—"}</small></td><td>{type === "kols" ? "Nhà sáng tạo nội dung" : `${item.total_kols ?? 0} KOL trực thuộc`}</td><td>{item.channel_count ?? item.total_channels ?? 0}</td><td><span className={`admin-status ${item.identity_verified ? "approved" : "in_review"}`}>{item.identity_verified ? "Đã xác minh" : "Đang hiển thị"}</span></td><td className="admin-entity-actions" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => open(item)} aria-label={`Xem chi tiết ${item.name}`}><Eye size={16} /></button><button className="edit" type="button" onClick={() => edit(item)} aria-label={`Chỉnh sửa ${item.name}`}><Pencil size={15} /></button></td></tr>)}
-        {!loading && !items.length && <tr><td className="admin-empty" colSpan={5}>Chưa có dữ liệu phù hợp.</td></tr>}
-      </tbody></table></div>
+      <div className="admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{label}</th>
+              <th>Thông tin</th>
+              <th>Kênh</th>
+              <th>Trạng thái</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => {
+              const itemId = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
+              const isHidden = Boolean(item.identity_verified);
+              return (
+                <tr key={item.influencer_key ?? item.source_id} onClick={() => open(item)}>
+                  <td>
+                    <strong>{item.name}</strong>
+                    <small>{item.nick_name || item.subtitle || "—"}</small>
+                  </td>
+                  <td>{type === "kols" ? "Nhà sáng tạo nội dung" : `${item.total_kols ?? 0} KOL trực thuộc`}</td>
+                  <td>{item.channel_count ?? item.total_channels ?? 0}</td>
+                  <td>
+                    <span className={`admin-status ${isHidden ? "in_review" : "approved"}`}>
+                      {isHidden ? <ShieldCheck size={12} /> : <CheckCircle2 size={12} />}
+                      {isHidden ? "Đã xác minh" : "Đang hiển thị"}
+                    </span>
+                  </td>
+                  <td className="admin-entity-actions" onClick={(event) => event.stopPropagation()}>
+                    <button className="view" type="button" onClick={() => open(item)} aria-label={`Xem chi tiết ${item.name}`} title="Xem chi tiết">
+                      <Info size={16} />
+                    </button>
+                    <button className="edit" type="button" onClick={() => edit(item)} aria-label={`Chỉnh sửa ${item.name}`} title="Chỉnh sửa">
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      className={isHidden ? "show-action" : "hide-action"}
+                      type="button"
+                      disabled={togglingId === itemId}
+                      onClick={() => promptToggleVisibility(item)}
+                      aria-label={isHidden ? `Hiển thị ${item.name} lên frontend` : `Ẩn ${item.name} khỏi frontend`}
+                      title={isHidden ? "Hiển thị lên frontend" : "Ẩn khỏi frontend"}
+                    >
+                      {isHidden ? <Globe size={15} /> : <EyeOff size={15} />}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {!loading && !items.length && <tr><td className="admin-empty" colSpan={5}>Chưa có dữ liệu phù hợp.</td></tr>}
+          </tbody>
+        </table>
+      </div>
       <Pager page={meta} onChange={setPage} />
       {selected && <DetailPanel title={`Chi tiết ${label}`} data={selected} onClose={() => setSelected(null)} />}
       {editing && <AdminEntityEditor type={type} data={editing} token={token} onClose={() => setEditing(null)} onSaved={(name) => { setEditing(null); setMessage(`Đã cập nhật ${label} ${name}.`); load(); }} />}
+      {pendingAction && (
+        <ConfirmActionModal
+          target={pendingAction}
+          loading={Boolean(togglingId)}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </section>
   );
 }
 
 const emptyNews: News = { slug: "", sourceUrl: "", title: "", excerpt: "", category: "", imageUrl: "", bodyText: "", publishedDate: new Date().toISOString().slice(0, 10) };
-export function AdminNewsManager({ token, canCreateDelete }: { token: string | null; canCreateDelete: boolean }) {
-  const [items, setItems] = useState<News[]>([]); const [form, setForm] = useState<News>(emptyNews); const [editing, setEditing] = useState(false); const [formOpen, setFormOpen] = useState(false); const [message, setMessage] = useState(""); const [query, setQuery] = useState(""); const [page, setPage] = useState(1); const [meta, setMeta] = useState<Page>(emptyPage); const [selected, setSelected] = useState<News | null>(null);
-  const load = useCallback(() => fetch(`${apiUrl}/admin/news?limit=20&page=${page}&search=${encodeURIComponent(query)}`, { headers: { authorization: `Bearer ${token}` } }).then((response) => response.json()).then((payload) => { setItems(payload.data ?? []); setMeta(payload.pagination ?? emptyPage); }).catch(() => { setItems([]); setMeta(emptyPage); }), [token, page, query]);
-  useEffect(() => { load(); }, [load]);
-  const submit = async (event: FormEvent) => { event.preventDefault(); setMessage(""); const endpoint = editing ? `${apiUrl}/admin/news/${form.slug}` : `${apiUrl}/admin/news`; const response = await fetch(endpoint, { method: editing ? "PATCH" : "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(form) }); const data = await response.json().catch(() => null); if (!response.ok) { setMessage(data?.message ?? "Không thể lưu tin tức."); return; } setForm(emptyNews); setEditing(false); setFormOpen(false); setMessage("Đã lưu tin tức."); load(); };
-  const remove = async (slug: string) => { if (!window.confirm("Xóa tin tức này?")) return; const response = await fetch(`${apiUrl}/admin/news/${slug}`, { method: "DELETE", headers: { authorization: `Bearer ${token}` } }); if (!response.ok) { setMessage("Không thể xóa tin tức."); return; } setMessage("Đã xóa tin tức."); load(); };
-  const openNews = async (item: News) => { const response = await fetch(`${apiUrl}/news/${item.slug}`); const detail = await response.json().catch(() => null) as Record<string, unknown> | null; setSelected({ ...item, title: String(detail?.title ?? item.title), excerpt: String(detail?.excerpt ?? item.excerpt ?? ""), bodyText: String(detail?.body_text ?? detail?.bodyText ?? item.bodyText ?? ""), imageUrl: String(detail?.image_url ?? detail?.imageUrl ?? item.imageUrl ?? "") }); };
-  const closeForm = () => { setFormOpen(false); setEditing(false); setForm(emptyNews); };
 
-  return <section className="admin-list-card admin-manager admin-news-manager"><div className="admin-list-card-heading"><div><h2>Quản lý tin tức</h2><p>Chỉnh sửa tin tức hiển thị công khai. Bấm một dòng để xem chi tiết.</p></div><div className="admin-news-toolbar"><span>{meta.total} tin tức</span>{canCreateDelete && <button type="button" onClick={() => { setForm(emptyNews); setEditing(false); setFormOpen(true); }}><Plus size={15} />Thêm tin tức</button>}</div></div><label className="admin-manager-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề tin tức" /></label>{message && <p className="admin-news-message">{message}</p>}<div className="admin-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Chuyên mục</th><th>Ngày đăng</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.slug} onClick={() => openNews(item)}><td className="admin-news-title"><strong title={item.title}>{item.title}</strong><small>{item.slug}</small></td><td>{item.category || "—"}</td><td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td><td className="admin-news-actions" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }} aria-label={`Chỉnh sửa ${item.title}`}><Pencil size={14} /></button>{canCreateDelete && <button type="button" onClick={() => remove(item.slug)} aria-label={`Xóa ${item.title}`}><Trash2 size={14} /></button>}</td></tr>)}{!items.length && <tr><td className="admin-empty" colSpan={4}>Chưa có tin tức.</td></tr>}</tbody></table></div><Pager page={meta} onChange={setPage} />{selected && <NewsDetail item={selected} onClose={() => setSelected(null)} />}{formOpen && <div className="admin-news-modal" onMouseDown={closeForm}><div className="admin-news-form-modal" onMouseDown={(e) => e.stopPropagation()}><button className="admin-detail-close" type="button" onClick={closeForm}><X size={18} /></button><h3>{editing ? "Chỉnh sửa tin tức" : "Thêm tin tức mới"}</h3><form className="admin-news-form" onSubmit={submit}><input value={form.slug} disabled={editing} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="slug-bai-viet (vd: tin-tuc-moi)" required /><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Tiêu đề bài viết" required /><input value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} placeholder="Đường dẫn nguồn" required /><input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Chuyên mục" /><input value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} placeholder="URL hình ảnh" /><input type="date" value={form.publishedDate} onChange={(event) => setForm({ ...form, publishedDate: event.target.value })} /><textarea value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} placeholder="Mô tả ngắn (tóm tắt nội dung bài viết)" /><textarea value={form.bodyText} onChange={(event) => setForm({ ...form, bodyText: event.target.value })} placeholder="Nội dung bài viết chi tiết" /><div className="admin-form-actions"><button type="button" className="secondary" onClick={closeForm}>Hủy</button><button type="submit"><Plus size={15} />{editing ? "Cập nhật" : "Thêm tin tức"}</button></div></form></div></div>}</section>;
+export function AdminNewsManager({ token, canCreateDelete }: { token: string | null; canCreateDelete: boolean }) {
+  const [items, setItems] = useState<News[]>([]);
+  const [form, setForm] = useState<News>(emptyNews);
+  const [editing, setEditing] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<Page>(emptyPage);
+  const [selected, setSelected] = useState<News | null>(null);
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<ConfirmActionTarget | null>(null);
+
+  const load = useCallback(() => fetch(`${apiUrl}/admin/news?limit=20&page=${page}&search=${encodeURIComponent(query)}`, { headers: { authorization: `Bearer ${token}` } }).then((response) => response.json()).then((payload) => { setItems(payload.data ?? []); setMeta(payload.pagination ?? emptyPage); }).catch(() => { setItems([]); setMeta(emptyPage); }), [token, page, query]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+    const endpoint = editing ? `${apiUrl}/admin/news/${form.slug}` : `${apiUrl}/admin/news`;
+    const response = await fetch(endpoint, {
+      method: editing ? "PATCH" : "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(form)
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      setMessage(data?.message ?? "Không thể lưu tin tức.");
+      return;
+    }
+    setForm(emptyNews);
+    setEditing(false);
+    setFormOpen(false);
+    setMessage("Đã lưu tin tức.");
+    load();
+  };
+
+  const executeRemove = async (item: News) => {
+    if (!token) {
+      setMessage("Phiên đăng nhập quản trị đã hết hạn.");
+      setPendingAction(null);
+      return;
+    }
+
+    setDeletingSlug(item.slug);
+    setMessage("");
+    try {
+      const response = await fetch(`${apiUrl}/admin/news/${encodeURIComponent(item.slug)}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` }
+      });
+      const payload = response.status === 204 ? null : await response.json().catch(() => null) as { message?: string } | null;
+      if (!response.ok) throw new Error(payload?.message ?? "Không thể xóa tin tức.");
+      setSelected(null);
+      setPendingAction(null);
+      setMessage(`Đã xóa tin tức “${item.title}”.`);
+      if (items.length === 1 && page > 1) setPage((current) => current - 1);
+      else load();
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
+    } finally {
+      setDeletingSlug(null);
+    }
+  };
+
+  const promptRemove = (item: News) => {
+    setPendingAction({
+      id: item.slug,
+      name: item.title,
+      label: "tin tức",
+      actionType: "delete",
+      title: "Xác nhận xóa tin tức",
+      message: `Bạn có chắc chắn muốn xóa tin tức “${item.title}” không?`,
+      note: "⚠️ Toàn bộ dữ liệu bài viết sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
+      confirmLabel: "Xác nhận xóa",
+      confirmStyle: "danger",
+      onConfirm: () => executeRemove(item),
+    });
+  };
+
+  const openNews = async (item: News) => {
+    const response = await fetch(`${apiUrl}/news/${item.slug}`);
+    const detail = await response.json().catch(() => null) as Record<string, unknown> | null;
+    setSelected({
+      ...item,
+      title: String(detail?.title ?? item.title),
+      excerpt: String(detail?.excerpt ?? item.excerpt ?? ""),
+      bodyText: String(detail?.body_text ?? detail?.bodyText ?? item.bodyText ?? ""),
+      imageUrl: String(detail?.image_url ?? detail?.imageUrl ?? item.imageUrl ?? "")
+    });
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditing(false);
+    setForm(emptyNews);
+  };
+
+  return (
+    <section className="admin-list-card admin-manager admin-news-manager">
+      <div className="admin-list-card-heading">
+        <div>
+          <h2>Quản lý tin tức</h2>
+          <p>Chỉnh sửa tin tức hiển thị công khai. Bấm một dòng để xem chi tiết.</p>
+        </div>
+        <div className="admin-news-toolbar">
+          <span>{meta.total} tin tức</span>
+          {canCreateDelete && (
+            <button type="button" onClick={() => { setForm(emptyNews); setEditing(false); setFormOpen(true); }}><Plus size={15} />Thêm tin tức</button>
+          )}
+        </div>
+      </div>
+      <label className="admin-manager-search">
+        <Search size={17} />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề tin tức" />
+      </label>
+      {message && <p className="admin-news-message">{message}</p>}
+      <div className="admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tiêu đề</th>
+              <th>Chuyên mục</th>
+              <th>Ngày đăng</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.slug} onClick={() => openNews(item)}>
+                <td className="admin-news-title">
+                  <strong title={item.title}>{item.title}</strong>
+                  <small>{item.slug}</small>
+                </td>
+                <td>{item.category || "—"}</td>
+                <td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td>
+                <td className="admin-news-actions" onClick={(event) => event.stopPropagation()}>
+                  <button type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }} aria-label={`Chỉnh sửa ${item.title}`} title="Chỉnh sửa">
+                    <Pencil size={14} />
+                  </button>
+                  {canCreateDelete && (
+                    <button className="delete" type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={`Xóa ${item.title}`} title="Xóa tin tức">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {!items.length && <tr><td className="admin-empty" colSpan={4}>Chưa có tin tức.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <Pager page={meta} onChange={setPage} />
+      {selected && <NewsDetail item={selected} onClose={() => setSelected(null)} />}
+      {pendingAction && (
+        <ConfirmActionModal
+          target={pendingAction}
+          loading={Boolean(deletingSlug)}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+      {formOpen && (
+        <div className="admin-news-modal" onMouseDown={closeForm}>
+          <div className="admin-news-form-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <button className="admin-detail-close" type="button" onClick={closeForm}>
+              <X size={18} />
+            </button>
+            <h3>{editing ? "Chỉnh sửa tin tức" : "Thêm tin tức mới"}</h3>
+            <form className="admin-news-form" onSubmit={submit}>
+              <input value={form.slug} disabled={editing} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="slug-bai-viet (vd: tin-tuc-moi)" required />
+              <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Tiêu đề bài viết" required />
+              <input value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} placeholder="Đường dẫn nguồn" required />
+              <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Chuyên mục" />
+              <input value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} placeholder="URL hình ảnh" />
+              <input type="date" value={form.publishedDate} onChange={(event) => setForm({ ...form, publishedDate: event.target.value })} />
+              <textarea value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} placeholder="Mô tả ngắn (tóm tắt nội dung bài viết)" />
+              <textarea value={form.bodyText} onChange={(event) => setForm({ ...form, bodyText: event.target.value })} placeholder="Nội dung bài viết chi tiết" />
+              <div className="admin-form-actions">
+                <button type="button" className="secondary" onClick={closeForm}>Hủy</button>
+                <button type="submit"><Plus size={15} />{editing ? "Cập nhật" : "Thêm tin tức"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }

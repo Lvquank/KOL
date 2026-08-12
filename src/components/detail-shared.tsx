@@ -76,7 +76,7 @@ export function DetailStats({ items }: { items: DetailStat[] }) {
   );
 }
 
-export function ContributionCard({ entity, entityName }: { entity: "KOL" | "MCN"; entityName: string }) {
+export function ContributionCard({ entity, entityName, entityKey }: { entity: "KOL" | "MCN"; entityName: string; entityKey?: string }) {
   return (
     <div className="bg-white rounded-[4px] border border-gray-200 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-5 flex flex-col text-center gap-3">
       <Info className="w-7 h-7 text-primary self-start" />
@@ -86,7 +86,7 @@ export function ContributionCard({ entity, entityName }: { entity: "KOL" | "MCN"
       <p className="text-[12px] text-gray-500 leading-relaxed text-left">
         Nếu bạn có thông tin hữu ích về {entity} này còn thiếu trên hệ thống, hãy gửi đề xuất để cộng đồng cùng đóng góp xây dựng cơ sở dữ liệu quốc gia.
       </p>
-      <ProposalDialog entity={entity} entityName={entityName} />
+      <ProposalDialog entity={entity} entityName={entityName} entityKey={entityKey} />
     </div>
   );
 }

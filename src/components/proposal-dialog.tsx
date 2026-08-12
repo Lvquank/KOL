@@ -3,10 +3,12 @@
 import { CheckCircle2, Info, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "@/lib/api";
 
 type ProposalDialogProps = {
   entity: "KOL" | "MCN";
   entityName: string;
+  entityKey?: string;
 };
 
 const MCN_OPTION_GROUPS = [
@@ -29,13 +31,17 @@ const KOL_OPTION_GROUPS = [
   { label: "Khác", options: ["Thông tin khác"] },
 ];
 
-export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
+export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedOption, setSelectedOption] = useState("");
   const [details, setDetails] = useState("");
+  const [email, setEmail] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [proposalId, setProposalId] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -47,8 +53,12 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
     setStep(1);
     setSelectedOption("");
     setDetails("");
+    setEmail("");
     setAgreed(false);
     setSubmitted(false);
+    setSubmitting(false);
+    setSubmitError("");
+    setProposalId("");
   }
 
   function closeDialog() {
@@ -88,6 +98,45 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
     } else if (!event.shiftKey && document.activeElement === last) {
       event.preventDefault();
       first.focus();
+    }
+  }
+
+  async function submitProposal() {
+    if (entity !== "KOL") {
+      setSubmitted(true);
+      return;
+    }
+    if (!entityKey) {
+      setSubmitError("Không xác định được KOL cần bổ sung thông tin.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/information-proposals`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          influencerKey: entityKey,
+          proposalType: selectedOption,
+          details,
+          submitterEmail: email,
+          declarationConfirmed: agreed,
+        }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        data?: { proposalId: string };
+        message?: string;
+      } | null;
+      if (!response.ok || !payload?.data) {
+        throw new Error(payload?.message ?? "Không thể gửi đề xuất lúc này.");
+      }
+      setProposalId(payload.data.proposalId);
+      setSubmitted(true);
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -167,10 +216,15 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
               {submitted ? (
                 <div className="flex flex-col items-center py-6 text-center" aria-live="polite">
                   <CheckCircle2 className="h-10 w-10 text-emerald-600" />
-                  <h3 className="mt-3 text-[15px] font-extrabold text-gray-900">Đã kiểm tra nội dung đề xuất</h3>
+                  <h3 className="mt-3 text-[15px] font-extrabold text-gray-900">
+                    {entity === "KOL" ? "Đã gửi đề xuất" : "Đã kiểm tra nội dung đề xuất"}
+                  </h3>
                   <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-gray-500">
-                    Đây là bản tham chiếu local. Nội dung chỉ được mô phỏng trên trình duyệt và không được gửi tới kol.gov.vn hay lưu thông tin cá nhân.
+                    {entity === "KOL"
+                      ? "Cảm ơn bạn đã đóng góp. Bộ phận quản trị sẽ kiểm tra nội dung trước khi cập nhật hồ sơ KOL."
+                      : "Đề xuất cho MCN hiện chưa được tiếp nhận trong hệ thống quản trị."}
                   </p>
+                  {proposalId ? <code className="mt-3 rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-500">Mã: {proposalId}</code> : null}
                 </div>
               ) : null}
 
@@ -213,6 +267,7 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                     <span className="text-[12px] font-medium text-gray-700">Nội dung đề xuất cụ thể *</span>
                     <textarea
                       value={details}
+                      minLength={10}
                       maxLength={500}
                       rows={5}
                       placeholder="Mô tả rõ thông tin bạn muốn đề xuất bổ sung. Ví dụ: link kênh, tên công ty, thông tin liên hệ..."
@@ -222,14 +277,16 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                     <span className="mt-1 block text-right text-[10px] text-gray-400">{details.length} / 500</span>
                   </label>
                   <label className="block">
-                    <span className="text-[12px] font-medium text-gray-700">Email của bạn</span>
+                    <span className="text-[12px] font-medium text-gray-700">Email của bạn (không bắt buộc)</span>
                     <input
                       type="email"
-                      disabled
-                      placeholder="Đã vô hiệu trong bản tham chiếu local"
-                      className="mt-2 h-10 w-full cursor-not-allowed rounded-[4px] border border-gray-200 bg-gray-50 px-3 text-[12px] text-gray-400"
+                      value={email}
+                      maxLength={254}
+                      placeholder="email@example.com"
+                      className="mt-2 h-10 w-full rounded-[4px] border border-gray-200 bg-white px-3 text-[12px] text-gray-700 outline-none transition-colors placeholder:text-gray-300 focus:border-primary focus:ring-2 focus:ring-orange-100"
+                      onChange={(event) => setEmail(event.target.value)}
                     />
-                    <span className="mt-1 block text-[10px] text-gray-400">Không thu thập dữ liệu cá nhân trong bản dựng local.</span>
+                    <span className="mt-1 block text-[10px] text-gray-400">Dùng khi bộ phận quản trị cần xác minh thêm nội dung bạn cung cấp.</span>
                   </label>
                 </div>
               ) : null}
@@ -239,7 +296,7 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                   <div className="rounded-[4px] border border-gray-200 bg-gray-50 p-4 text-[12px] leading-relaxed text-gray-600">
                     <p className="font-semibold text-gray-700">Tôi cam kết:</p>
                     <p className="mt-3">• Thông tin tôi cung cấp là trung thực và có cơ sở, không nhằm mục đích gây hại, cạnh tranh không lành mạnh hoặc bôi nhọ KOL/MCN.</p>
-                    <p className="mt-3">• Tôi hiểu rằng đây là bản mô phỏng local và nội dung sẽ không được gửi đến hệ thống chính thức.</p>
+                    <p className="mt-3">• Tôi hiểu rằng đề xuất sẽ được bộ phận quản trị kiểm tra trước khi sử dụng để cập nhật dữ liệu.</p>
                   </div>
                   <label className="flex cursor-pointer items-start gap-3 text-[12px] text-gray-700">
                     <input
@@ -252,8 +309,9 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                   </label>
                   <div className="flex gap-2 rounded-[4px] border border-blue-100 bg-blue-50 p-3 text-[11px] leading-relaxed text-blue-700">
                     <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <p>Chức năng được mô phỏng để kiểm thử giao diện; không có request gửi đề xuất và không lưu email.</p>
+                    <p>{entity === "KOL" ? "Sau khi gửi, đề xuất sẽ xuất hiện trong hàng đợi xử lý riêng của quản trị viên." : "Hiện hệ thống mới tiếp nhận đề xuất bổ sung cho KOL."}</p>
                   </div>
+                  {submitError ? <p className="rounded-[4px] bg-red-50 px-3 py-2 text-[11px] text-red-600" role="alert">{submitError}</p> : null}
                 </div>
               ) : null}
             </div>
@@ -285,7 +343,7 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                   {step < 3 ? (
                     <button
                       type="button"
-                      disabled={step === 1 ? !selectedOption : !details.trim()}
+                      disabled={step === 1 ? !selectedOption : details.trim().length < 10}
                       className="min-w-[148px] rounded-[5px] bg-primary px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-[#ffb595]"
                       onClick={() => setStep((step + 1) as 2 | 3)}
                     >
@@ -294,11 +352,11 @@ export function ProposalDialog({ entity, entityName }: ProposalDialogProps) {
                   ) : (
                     <button
                       type="button"
-                      disabled={!agreed}
+                      disabled={!agreed || submitting}
                       className="min-w-[148px] rounded-[5px] bg-primary px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-[#ffb595]"
-                      onClick={() => setSubmitted(true)}
+                      onClick={submitProposal}
                     >
-                      Gửi đề xuất
+                      {submitting ? "Đang gửi..." : "Gửi đề xuất"}
                     </button>
                   )}
                 </>

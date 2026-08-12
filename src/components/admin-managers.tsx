@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Activity, BarChart2, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, FileText, Globe, Heart, Pencil, Plus, Search, ShieldCheck, Trash2, User, UserCheck, Users, X } from "lucide-react";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 type Page = { page: number; totalPages: number; total: number };
@@ -14,12 +14,221 @@ function Pager({ page, onChange }: { page: Page; onChange: (next: number) => voi
   return <div className="admin-pager"><span>Hiển thị trang {page.page}/{page.totalPages} · {page.total} bản ghi</span><div><button disabled={page.page <= 1} onClick={() => onChange(page.page - 1)} type="button"><ChevronLeft size={16} />Trước</button><button disabled={page.page >= page.totalPages} onClick={() => onChange(page.page + 1)} type="button">Sau<ChevronRight size={16} /></button></div></div>;
 }
 
+function formatNumber(num: unknown) {
+  const val = Number(num);
+  if (isNaN(val) || val === 0) return "0";
+  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
+  if (val >= 1_000) return `${(val / 1_000).toFixed(1)}K`;
+  return val.toLocaleString("vi-VN");
+}
+
+function formatVietnameseStat(num: unknown): string {
+  const val = Number(num);
+  if (isNaN(val) || val <= 0) return "0";
+  if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(1)} Tỷ`;
+  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)} Tr`;
+  if (val >= 10_000) return `${(val / 1_000).toFixed(1)}K`;
+  return val.toLocaleString("vi-VN");
+}
+
 function DetailPanel({ title, data, onClose }: { title: string; data: Record<string, unknown>; onClose: () => void }) {
-  return <section className="admin-record-detail"><button type="button" onClick={onClose}><X size={17} /></button><h3>{title}</h3><div>{Object.entries(data).filter(([, value]) => value !== null && value !== undefined && value !== "").slice(0, 14).map(([key, value]) => <p key={key}><strong>{key.replaceAll("_", " ")}</strong><span>{typeof value === "object" ? JSON.stringify(value) : String(value)}</span></p>)}</div></section>;
+  const name = String(data.name || data.title || "Chi tiết");
+  const sub = String(data.nick_name || data.subtitle || "");
+  const avatar = typeof data.avatar_url === "string" ? data.avatar_url : null;
+  const verified = Boolean(data.identity_verified);
+  const key = String(data.influencer_key || data.source_id || "");
+
+  const channels = Array.isArray(data.channels) ? (data.channels as Array<Record<string, unknown>>) : [];
+  const mcns = Array.isArray(data.mcns) ? (data.mcns as Array<Record<string, unknown>>) : [];
+  const posts = Array.isArray(data.recent_posts) ? (data.recent_posts as Array<Record<string, unknown>>) : [];
+  const memberKols = Array.isArray(data.member_influencers) ? (data.member_influencers as Array<Record<string, unknown>>) : [];
+
+  const totalFollowers = Number(data.followers_total) || channels.reduce((acc, ch) => acc + (Number(ch.followers) || 0), 0);
+  const totalViews = Number(data.views_total) || channels.reduce((acc, ch) => acc + (Number(ch.views) || 0), 0);
+  const totalLikes = Number(data.likes_total) || channels.reduce((acc, ch) => acc + (Number(ch.likes) || 0), 0);
+  const totalInteractions = Number(data.interactions_total) || (totalViews + totalLikes + (totalFollowers > 0 ? Math.round(totalFollowers * 0.1) : 0)) || (totalViews + totalLikes);
+
+  return (
+    <div className="admin-news-modal" onMouseDown={onClose}>
+      <section className="admin-record-detail admin-rich-detail" onMouseDown={(e) => e.stopPropagation()}>
+        <button type="button" className="admin-detail-close" onClick={onClose} aria-label="Đóng">
+          <X size={18} />
+        </button>
+
+        <div className="admin-detail-profile-header">
+          <div className="admin-detail-avatar">
+            {avatar ? (
+              <img src={avatar} alt={name} />
+            ) : (
+              <div className="avatar-fallback">
+                {name.startsWith("#") || !name.trim() ? <User size={26} /> : name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="admin-detail-profile-info">
+            <div className="admin-detail-profile-title">
+              <h2>{name}</h2>
+              {verified ? (
+                <span className="admin-status approved"><CheckCircle2 size={12} /> Đã xác minh</span>
+              ) : (
+                <span className="admin-status in_review"><ShieldCheck size={12} /> Đang hiển thị</span>
+              )}
+            </div>
+            {sub && <p className="admin-detail-sub">{sub}</p>}
+            {key && <code className="admin-detail-key-tag">{key}</code>}
+          </div>
+        </div>
+
+        {/* Số liệu nổi bật */}
+        <div className="admin-detail-section">
+          <h3>Số liệu nổi bật</h3>
+          <div className="admin-stats-highlight-grid">
+            <div className="admin-stat-highlight-card">
+              <div className="stat-card-header">
+                <Activity size={16} />
+                <span>Tổng tương tác</span>
+              </div>
+              <strong>{formatVietnameseStat(totalInteractions)}</strong>
+            </div>
+
+            <div className="admin-stat-highlight-card">
+              <div className="stat-card-header">
+                <Users size={16} />
+                <span>Người theo dõi</span>
+              </div>
+              <strong>{formatVietnameseStat(totalFollowers)}</strong>
+            </div>
+
+            <div className="admin-stat-highlight-card">
+              <div className="stat-card-header">
+                <BarChart2 size={16} />
+                <span>Lượt xem bài</span>
+              </div>
+              <strong>{formatVietnameseStat(totalViews)}</strong>
+            </div>
+
+            <div className="admin-stat-highlight-card">
+              <div className="stat-card-header">
+                <Heart size={16} />
+                <span>Lượt thích</span>
+              </div>
+              <strong>{formatVietnameseStat(totalLikes)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {channels.length > 0 && (
+          <div className="admin-detail-section">
+            <h3><Globe size={16} /> Kênh mạng xã hội ({channels.length})</h3>
+            <div className="admin-channels-grid">
+              {channels.map((ch, idx) => {
+                const chName = String(ch.channel_name || ch.name || "Kênh");
+                const platform = String(ch.channel_type || ch.platform || "social").toLowerCase();
+                const url = String(ch.channel_url || ch.url || "#");
+                const followers = ch.followers;
+                const views = ch.views;
+                return (
+                  <div key={idx} className="admin-channel-card">
+                    <div className="admin-channel-info">
+                      <span className={`platform-badge ${platform}`}>{platform}</span>
+                      <strong>{chName}</strong>
+                      <small>
+                        {followers ? `${formatNumber(followers)} theo dõi` : views ? `${formatNumber(views)} lượt xem` : "Đang cập nhật"}
+                      </small>
+                    </div>
+                    {url && url !== "#" && (
+                      <a href={url} target="_blank" rel="noreferrer" className="admin-channel-link" title="Mở đường dẫn">
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {mcns.length > 0 && (
+          <div className="admin-detail-section">
+            <h3><ShieldCheck size={16} /> Trực thuộc MCN</h3>
+            <div className="admin-member-kols">
+              {mcns.map((mcn, idx) => (
+                <span key={idx} className="admin-kol-chip">
+                  {String(mcn.name)} {mcn.relationshipType ? `(${String(mcn.relationshipType)})` : ""}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {memberKols.length > 0 && (
+          <div className="admin-detail-section">
+            <h3><UserCheck size={16} /> KOL trực thuộc ({memberKols.length})</h3>
+            <div className="admin-member-kols">
+              {memberKols.slice(0, 10).map((kol, idx) => (
+                <span key={idx} className="admin-kol-chip">
+                  {String(kol.name)}
+                </span>
+              ))}
+              {memberKols.length > 10 && <span className="admin-kol-chip more">+{memberKols.length - 10} khác</span>}
+            </div>
+          </div>
+        )}
+
+        {posts.length > 0 && (
+          <div className="admin-detail-section">
+            <h3><FileText size={16} /> Bài viết gần đây</h3>
+            <div className="admin-posts-list">
+              {posts.map((post, idx) => {
+                const thumb = typeof post.thumbnail_url === "string" ? post.thumbnail_url : null;
+                const platform = typeof post.platform === "string" ? post.platform : null;
+                const viewsStr = post.views ? formatNumber(post.views) : null;
+                return (
+                  <a key={idx} href={String(post.source_url || "#")} target="_blank" rel="noreferrer" className="admin-post-card">
+                    {thumb && <img src={thumb} alt="" />}
+                    <div>
+                      <strong>{String(post.title || "")}</strong>
+                      <small>
+                        {platform && <span className="platform-tag">{platform}</span>}
+                        {viewsStr && ` · ${viewsStr} lượt xem`}
+                      </small>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }
 
 function NewsDetail({ item, onClose }: { item: News; onClose: () => void }) {
-  return <div className="admin-news-modal" role="dialog" aria-modal="true" aria-label="Chi tiết tin tức" onMouseDown={onClose}><section className="admin-record-detail admin-news-detail" onMouseDown={(event) => event.stopPropagation()}><button type="button" onClick={onClose}><X size={17} /></button>{item.imageUrl && <div className="admin-news-detail-image" role="img" aria-label={item.title} style={{ backgroundImage: `url("${item.imageUrl}")` }} />}<span className="admin-news-detail-category">{item.category || "Tin tức"}</span><h3>{item.title}</h3><p className="admin-news-detail-meta">{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "Chưa có ngày đăng"} · {item.slug}</p>{item.excerpt && <p className="admin-news-detail-excerpt">{item.excerpt}</p>}<div className="admin-news-detail-body">{item.bodyText || "Bài viết chưa có nội dung chi tiết."}</div></section></div>;
+  return (
+    <div className="admin-news-modal" role="dialog" aria-modal="true" aria-label="Chi tiết tin tức" onMouseDown={onClose}>
+      <section className="admin-news-detail" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="admin-detail-close" onClick={onClose} aria-label="Đóng">
+          <X size={18} />
+        </button>
+        {item.imageUrl && (
+          <div className="admin-news-detail-image" role="img" aria-label={item.title} style={{ backgroundImage: `url("${item.imageUrl}")` }} />
+        )}
+        <div className="admin-news-detail-content">
+          <span className="admin-news-detail-category">{item.category || "Tin tức"}</span>
+          <h3>{item.title}</h3>
+          <div className="admin-news-detail-meta">
+            <Calendar size={13} />
+            <span>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "Chưa có ngày đăng"}</span>
+            <span className="dot">•</span>
+            <code className="slug-tag">{item.slug}</code>
+          </div>
+          {item.excerpt && <div className="admin-news-detail-excerpt">{item.excerpt}</div>}
+          <div className="admin-news-detail-body">{item.bodyText || "Bài viết chưa có nội dung chi tiết."}</div>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export function AdminEntityManager({ type }: { type: "kols" | "mcns" }) {
@@ -38,6 +247,7 @@ export function AdminNewsManager({ token, editable }: { token: string | null; ed
   const submit = async (event: FormEvent) => { event.preventDefault(); setMessage(""); const endpoint = editing ? `${apiUrl}/admin/news/${form.slug}` : `${apiUrl}/admin/news`; const response = await fetch(endpoint, { method: editing ? "PATCH" : "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(form) }); const data = await response.json().catch(() => null); if (!response.ok) { setMessage(data?.message ?? "Không thể lưu tin tức."); return; } setForm(emptyNews); setEditing(false); setFormOpen(false); setMessage("Đã lưu tin tức."); load(); };
   const remove = async (slug: string) => { if (!window.confirm("Xóa tin tức này?")) return; const response = await fetch(`${apiUrl}/admin/news/${slug}`, { method: "DELETE", headers: { authorization: `Bearer ${token}` } }); if (!response.ok) { setMessage("Không thể xóa tin tức."); return; } setMessage("Đã xóa tin tức."); load(); };
   const openNews = async (item: News) => { const response = await fetch(`${apiUrl}/news/${item.slug}`); const detail = await response.json().catch(() => null) as Record<string, unknown> | null; setSelected({ ...item, title: String(detail?.title ?? item.title), excerpt: String(detail?.excerpt ?? item.excerpt ?? ""), bodyText: String(detail?.body_text ?? detail?.bodyText ?? item.bodyText ?? ""), imageUrl: String(detail?.image_url ?? detail?.imageUrl ?? item.imageUrl ?? "") }); };
-  if (editable && !formOpen) return <section className="admin-list-card admin-manager admin-news-manager"><div className="admin-list-card-heading"><div><h2>Quản lý tin tức</h2><p>Tạo, cập nhật hoặc xóa tin tức hiển thị công khai. Bấm một dòng để xem chi tiết.</p></div><div className="admin-news-toolbar"><span>{meta.total} tin tức</span><button type="button" onClick={() => { setForm(emptyNews); setEditing(false); setFormOpen(true); }}><Plus size={15} />Thêm tin tức</button></div></div><label className="admin-manager-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề tin tức" /></label>{message && <p className="admin-news-message">{message}</p>}<div className="admin-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Chuyên mục</th><th>Ngày đăng</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.slug} onClick={() => openNews(item)}><td className="admin-news-title"><strong title={item.title}>{item.title}</strong><small>{item.slug}</small></td><td>{item.category || "—"}</td><td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td><td className="admin-news-actions" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }}><Pencil size={14} /></button><button type="button" onClick={() => remove(item.slug)}><Trash2 size={14} /></button></td></tr>)}{!items.length && <tr><td className="admin-empty" colSpan={4}>Chưa có tin tức.</td></tr>}</tbody></table></div><Pager page={meta} onChange={setPage} />{selected && <NewsDetail item={selected} onClose={() => setSelected(null)} />}</section>;
-  return <section className="admin-list-card admin-manager admin-news-manager"><div className="admin-list-card-heading"><div><h2>Quản lý tin tức</h2><p>Tạo, cập nhật hoặc xóa tin tức hiển thị công khai. Bấm một dòng để xem chi tiết.</p></div><span>{meta.total} tin tức</span></div>{editable ? <form className="admin-news-form" onSubmit={submit}><input value={form.slug} disabled={editing} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="slug-bai-viet" required /><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Tiêu đề" required /><input value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} placeholder="Đường dẫn nguồn" required /><input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Chuyên mục" /><input value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} placeholder="URL ảnh" /><input type="date" value={form.publishedDate} onChange={(event) => setForm({ ...form, publishedDate: event.target.value })} /><textarea value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} placeholder="Mô tả ngắn" /><textarea value={form.bodyText} onChange={(event) => setForm({ ...form, bodyText: event.target.value })} placeholder="Nội dung bài viết" /><div><button type="submit"><Plus size={15} />{editing ? "Cập nhật" : "Thêm tin tức"}</button>{editing && <button type="button" onClick={() => { setEditing(false); setForm(emptyNews); }}>Hủy</button>}</div></form> : <p className="admin-error">Tài khoản chuyên viên chỉ có quyền xem tin tức.</p>}<label className="admin-manager-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề tin tức" /></label>{message && <p className="admin-news-message">{message}</p>}<div className="admin-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Chuyên mục</th><th>Ngày đăng</th>{editable && <th></th>}</tr></thead><tbody>{items.map((item) => <tr key={item.slug} onClick={() => openNews(item)}><td className="admin-news-title"><strong title={item.title}>{item.title}</strong><small>{item.slug}</small></td><td>{item.category || "—"}</td><td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td>{editable && <td className="admin-news-actions" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => { setForm(item); setEditing(true); }}><Pencil size={14} /></button><button type="button" onClick={() => remove(item.slug)}><Trash2 size={14} /></button></td>}</tr>)}{!items.length && <tr><td className="admin-empty" colSpan={editable ? 4 : 3}>Chưa có tin tức.</td></tr>}</tbody></table></div><Pager page={meta} onChange={setPage} />{selected && <NewsDetail item={selected} onClose={() => setSelected(null)} />}</section>;
+  const closeForm = () => { setFormOpen(false); setEditing(false); setForm(emptyNews); };
+
+  return <section className="admin-list-card admin-manager admin-news-manager"><div className="admin-list-card-heading"><div><h2>Quản lý tin tức</h2><p>Tạo, cập nhật hoặc xóa tin tức hiển thị công khai. Bấm một dòng để xem chi tiết.</p></div><div className="admin-news-toolbar"><span>{meta.total} tin tức</span>{editable && <button type="button" onClick={() => { setForm(emptyNews); setEditing(false); setFormOpen(true); }}><Plus size={15} />Thêm tin tức</button>}</div></div><label className="admin-manager-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề tin tức" /></label>{message && <p className="admin-news-message">{message}</p>}<div className="admin-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Chuyên mục</th><th>Ngày đăng</th>{editable && <th></th>}</tr></thead><tbody>{items.map((item) => <tr key={item.slug} onClick={() => openNews(item)}><td className="admin-news-title"><strong title={item.title}>{item.title}</strong><small>{item.slug}</small></td><td>{item.category || "—"}</td><td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td>{editable && <td className="admin-news-actions" onClick={(event) => event.stopPropagation()}><button type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }}><Pencil size={14} /></button><button type="button" onClick={() => remove(item.slug)}><Trash2 size={14} /></button></td>}</tr>)}{!items.length && <tr><td className="admin-empty" colSpan={editable ? 4 : 3}>Chưa có tin tức.</td></tr>}</tbody></table></div><Pager page={meta} onChange={setPage} />{selected && <NewsDetail item={selected} onClose={() => setSelected(null)} />}{editable && formOpen && <div className="admin-news-modal" onMouseDown={closeForm}><div className="admin-news-form-modal" onMouseDown={(e) => e.stopPropagation()}><button className="admin-detail-close" type="button" onClick={closeForm}><X size={18} /></button><h3>{editing ? "Chỉnh sửa tin tức" : "Thêm tin tức mới"}</h3><form className="admin-news-form" onSubmit={submit}><input value={form.slug} disabled={editing} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="slug-bai-viet (vd: tin-tuc-moi)" required /><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Tiêu đề bài viết" required /><input value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} placeholder="Đường dẫn nguồn" required /><input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Chuyên mục" /><input value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} placeholder="URL hình ảnh" /><input type="date" value={form.publishedDate} onChange={(event) => setForm({ ...form, publishedDate: event.target.value })} /><textarea value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} placeholder="Mô tả ngắn (tóm tắt nội dung bài viết)" /><textarea value={form.bodyText} onChange={(event) => setForm({ ...form, bodyText: event.target.value })} placeholder="Nội dung bài viết chi tiết" /><div className="admin-form-actions"><button type="button" className="secondary" onClick={closeForm}>Hủy</button><button type="submit"><Plus size={15} />{editing ? "Cập nhật" : "Thêm tin tức"}</button></div></form></div></div>}</section>;
 }

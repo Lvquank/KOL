@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Clock3, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -17,6 +18,7 @@ import {
 interface NewsArchiveProps {
   initialCategories?: ApiCategoryItem[];
   initialNews?: ApiNewsItem[];
+  initialPage?: number;
 }
 
 const PAGE_SIZE = 6;
@@ -24,7 +26,10 @@ const PAGE_SIZE = 6;
 export function NewsArchive({
   initialCategories = FALLBACK_CATEGORIES,
   initialNews = FALLBACK_NEWS,
+  initialPage = 1,
 }: NewsArchiveProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [items, setItems] = useState<ApiNewsItem[]>(
     initialNews && initialNews.length > 0 ? initialNews : FALLBACK_NEWS
   );
@@ -33,7 +38,11 @@ export function NewsArchive({
   );
   const [category, setCategory] = useState<string>("Tất cả");
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
+
+  useEffect(() => {
+    setPage(initialPage);
+  }, [initialPage]);
 
   // Client-side refresh backup on mount
   useEffect(() => {
@@ -52,14 +61,29 @@ export function NewsArchive({
     };
   }, []);
 
+  const updatePage = (nextPage: number, mode: "push" | "replace" = "push") => {
+    setPage(nextPage);
+
+    const params = new URLSearchParams(window.location.search);
+    if (nextPage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(nextPage));
+    }
+
+    const queryString = params.toString();
+    const nextUrl = `${pathname}${queryString ? `?${queryString}` : ""}`;
+    router[mode](nextUrl, { scroll: false });
+  };
+
   const handleCategoryChange = (newCat: string) => {
     setCategory(newCat);
-    setPage(1);
+    updatePage(1, "replace");
   };
 
   const handleQueryChange = (q: string) => {
     setQuery(q);
-    setPage(1);
+    updatePage(1, "replace");
   };
 
   const categoryNames = useMemo(() => {
@@ -174,7 +198,7 @@ export function NewsArchive({
                   key={p}
                   aria-current={p === page ? "page" : undefined}
                   onClick={() => {
-                    setPage(p);
+                    updatePage(p);
                     if (typeof window !== "undefined") {
                       window.scrollTo({ top: 200, behavior: "smooth" });
                     }

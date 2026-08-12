@@ -9,6 +9,8 @@ import { API_BASE_URL } from "@/lib/api";
 type ApplicantType = "individual" | "organization";
 type UploadedChannel = { url: string; name: string; platform: string; duplicate: boolean };
 
+const avatarMimeTypes = new Set(["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"]);
+
 const categories = [
   { key: "real_estate", label: "Bất động sản" },
   { key: "technology", label: "Công nghệ" },
@@ -34,7 +36,9 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const [step, setStep] = useState(1);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [categoryKeys, setCategoryKeys] = useState<string[]>([]);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarFileName, setAvatarFileName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [avatarFileError, setAvatarFileError] = useState("");
   const [channelDetailFileName, setChannelDetailFileName] = useState("");
@@ -61,9 +65,9 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const toggleCategory = (key: string) => setCategoryKeys((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
   const selectAvatar = (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setAvatarFileError("Chỉ chấp nhận file ảnh."); return; }
+    if (!avatarMimeTypes.has(file.type)) { setAvatarFileError("Chỉ chấp nhận ảnh JPG, PNG, WebP, GIF hoặc AVIF."); return; }
     if (file.size > 20 * 1024 * 1024) { setAvatarFileError("Dung lượng ảnh không được vượt quá 20MB."); return; }
-    setAvatarFileError(""); setAvatarFileName(file.name); setAvatarPreviewUrl(URL.createObjectURL(file));
+    setAvatarFileError(""); setAvatarFile(file); setAvatarFileName(file.name); setAvatarUrl(""); setAvatarPreviewUrl(URL.createObjectURL(file));
   };
   useEffect(() => () => { if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl); }, [avatarPreviewUrl]);
   const inspectChannelDetailFile = async (file?: File) => {
@@ -108,9 +112,19 @@ export function RegistrationForm({ applicantType }: { applicantType: ApplicantTy
   const submit = async () => {
     setResult({ loading: true });
     try {
+      let uploadedAvatarUrl = avatarUrl;
+      if (avatarFile && !uploadedAvatarUrl) {
+        const uploadBody = new FormData();
+        uploadBody.append("avatar", avatarFile, avatarFile.name);
+        const uploadResponse = await fetch(`${API_BASE_URL}/registration/avatar`, { method: "POST", body: uploadBody });
+        const uploadData = await uploadResponse.json() as { data?: { secureUrl?: string }; message?: string };
+        if (!uploadResponse.ok || !uploadData.data?.secureUrl) throw new Error(uploadData.message ?? "Không thể tải ảnh lên.");
+        uploadedAvatarUrl = uploadData.data.secureUrl;
+        setAvatarUrl(uploadedAvatarUrl);
+      }
       const response = await fetch(`${API_BASE_URL}/registration/applications`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ applicantType, profile: { name: form.name, nationality: form.nationality, address: form.address, phone: form.phone, email: form.email, zalo: form.zalo, avatarFileName, activityCategories: categoryKeys, livestreamCertVerified: form.livestreamCertVerified, businessLicenseNo: form.businessLicenseNo, licenseIssuedAt: form.licenseIssuedAt, licenseIssuedBy: form.licenseIssuedBy, legalRepresentative: form.legalRepresentative, channelQuantity: form.channelQuantity, channelManager: form.channelManager, channelManagerPhone: form.channelManagerPhone, channelDetailFileName, whiteListRequestFileName }, channels: isOrganization ? [] : validChannelLinks.map((url) => ({ platform: "Kênh nội dung", name: form.channelManager, url })), declaration: { accuracyConfirmed: form.accuracyConfirmed, termsConfirmed: form.termsConfirmed } }),
+        body: JSON.stringify({ applicantType, profile: { name: form.name, nationality: form.nationality, address: form.address, phone: form.phone, email: form.email, zalo: form.zalo, avatarFileName, avatarUrl: uploadedAvatarUrl, activityCategories: categoryKeys, livestreamCertVerified: form.livestreamCertVerified, businessLicenseNo: form.businessLicenseNo, licenseIssuedAt: form.licenseIssuedAt, licenseIssuedBy: form.licenseIssuedBy, legalRepresentative: form.legalRepresentative, channelQuantity: form.channelQuantity, channelManager: form.channelManager, channelManagerPhone: form.channelManagerPhone, channelDetailFileName, whiteListRequestFileName }, channels: isOrganization ? [] : validChannelLinks.map((url) => ({ platform: "Kênh nội dung", name: form.channelManager, url })), declaration: { accuracyConfirmed: form.accuracyConfirmed, termsConfirmed: form.termsConfirmed } }),
       });
       const data = await response.json() as { data?: { applicationId: string }; message?: string };
       if (!response.ok) throw new Error(data.message ?? "Không thể gửi hồ sơ.");

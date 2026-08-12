@@ -3,7 +3,22 @@ import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { fetchApiCategories, fetchApiNews } from "@/lib/api-news";
 
-export default async function NewsPage() {
+type NewsPageSearchParams = {
+  page?: string | string[];
+};
+
+export default async function NewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<NewsPageSearchParams>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const rawPage = Array.isArray(resolvedSearchParams.page)
+    ? resolvedSearchParams.page[0]
+    : resolvedSearchParams.page;
+  const parsedPage = Number.parseInt(rawPage || "1", 10);
+  const initialPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
   const [initialCategories, initialNews] = await Promise.all([
     fetchApiCategories(),
     fetchApiNews(),
@@ -16,6 +31,7 @@ export default async function NewsPage() {
         <NewsArchive
           initialCategories={initialCategories}
           initialNews={initialNews}
+          initialPage={initialPage}
         />
       </main>
       <SiteFooter />

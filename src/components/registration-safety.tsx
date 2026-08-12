@@ -1,11 +1,12 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/api";
 import { ArrowRight, Check, MailWarning } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type RegistrationType = "kol" | "mcn";
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const apiUrl = API_BASE_URL;
 const reportGroups = ["Nội dung vi phạm pháp luật", "Thông tin sai sự thật", "Quảng cáo vi phạm", "Giả mạo tài khoản/kênh", "Nội dung không phù hợp", "Khác"];
 
 export function RegistrationSafety() {

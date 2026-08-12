@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { CheckCircle2, ClipboardList, Clock3, FileText, LockKeyhole, LogOut, MailWarning, Search, ShieldCheck, UserCheck, X } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
+import { CheckCircle2, ClipboardList, Clock3, FilePenLine, FileText, LockKeyhole, LogOut, MailWarning, Search, ShieldCheck, UserCheck, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AdminEntityManager, AdminNewsManager } from "./admin-managers";
+import { AdminProposalManager } from "./admin-proposal-manager";
 
 type AdminUser = { id: string; email: string; name: string; role: "super_admin" | "reviewer" };
-type Application = { application_id: string; applicant_type: "individual" | "organization"; status: string; display_name: string; email: string; phone: string | null; submitted_at: string | null; created_at: string; channelCount: number; avatar_file_name?: string | null };
+type Application = { application_id: string; applicant_type: "individual" | "organization"; status: string; display_name: string; email: string; phone: string | null; submitted_at: string | null; created_at: string; channelCount: number; avatar_file_name?: string | null; avatar_url?: string | null };
 type DetailApplication = Application & {
   categories?: Array<{ name: string }>;
   channels?: Array<{ platform: string; name: string; url: string }>;
@@ -15,7 +17,7 @@ type DetailApplication = Application & {
 };
 type ViolationReport = { report_id: string; reporter_name: string; reporter_phone: string; reporter_email: string | null; report_group: string; content: string; status: string; created_at: string };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const apiUrl = API_BASE_URL;
 
 export function AdminPortal() {
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -36,7 +38,8 @@ export function AdminPortal() {
   const [reports, setReports] = useState<ViolationReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [updatingReportId, setUpdatingReportId] = useState("");
-  const [activeTab, setActiveTab] = useState<"applications" | "reports" | "kols" | "mcns" | "news">("applications");
+  const [proposalPendingCount, setProposalPendingCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"applications" | "reports" | "proposals" | "kols" | "mcns" | "news">("applications");
 
   useEffect(() => {
     const token = window.localStorage.getItem("kol_admin_token");
@@ -75,6 +78,15 @@ export function AdminPortal() {
       .then((payload: { data: ViolationReport[] }) => setReports(payload.data))
       .catch(() => setReports([]))
       .finally(() => setReportsLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const token = window.localStorage.getItem("kol_admin_token");
+    fetch(`${apiUrl}/admin/information-proposals?status=submitted&limit=1`, { headers: { authorization: `Bearer ${token}` } })
+      .then(async (response) => response.ok ? response.json() : Promise.reject())
+      .then((payload: { pagination: { total: number } }) => setProposalPendingCount(payload.pagination.total))
+      .catch(() => setProposalPendingCount(0));
   }, [user]);
 
   const stats = useMemo(() => ({
@@ -187,6 +199,7 @@ export function AdminPortal() {
         <nav className="admin-module-nav" aria-label="Điều hướng quản trị">
           <button className={activeTab === "applications" ? "active" : ""} type="button" onClick={() => setActiveTab("applications")}><ClipboardList size={18} />Hồ sơ đăng ký <span>{applicationTotal}</span></button>
           <button className={activeTab === "reports" ? "active" : ""} type="button" onClick={() => { setActiveTab("reports"); setSelectedApplication(null); }}><MailWarning size={18} />Phản ánh <span>{reports.filter((report) => report.status === "submitted").length}</span></button>
+          <button className={activeTab === "proposals" ? "active" : ""} type="button" onClick={() => { setActiveTab("proposals"); setSelectedApplication(null); }}><FilePenLine size={18} />Đề xuất bổ sung <span>{proposalPendingCount}</span></button>
           <button className={activeTab === "kols" ? "active" : ""} type="button" onClick={() => { setActiveTab("kols"); setSelectedApplication(null); }}><UserCheck size={18} />Quản lý KOL</button>
           <button className={activeTab === "mcns" ? "active" : ""} type="button" onClick={() => { setActiveTab("mcns"); setSelectedApplication(null); }}><ShieldCheck size={18} />Quản lý MCN</button>
           <button className={activeTab === "news" ? "active" : ""} type="button" onClick={() => { setActiveTab("news"); setSelectedApplication(null); }}><FileText size={18} />Quản lý tin tức</button>
@@ -194,9 +207,9 @@ export function AdminPortal() {
 
         <div className="admin-page-heading">
           <div>
-            <p>{activeTab === "reports" ? "TIẾP NHẬN PHẢN ÁNH" : activeTab === "kols" ? "QUẢN LÝ DỮ LIỆU" : activeTab === "mcns" ? "QUẢN LÝ DỮ LIỆU" : activeTab === "news" ? "QUẢN LÝ NỘI DUNG" : "QUẢN LÝ HỒ SƠ"}</p>
-            <h1>{activeTab === "reports" ? "Phản ánh & Khiếu nại" : activeTab === "kols" ? "Danh sách KOL" : activeTab === "mcns" ? "Danh sách MCN" : activeTab === "news" ? "Quản lý tin tức" : "Hồ sơ đăng ký"}</h1>
-            <small>{activeTab === "reports" ? "Quản lý các phản ánh gửi từ biểu mẫu công khai." : activeTab === "kols" ? "Tra cứu dữ liệu KOL đang hiển thị trên hệ thống." : activeTab === "mcns" ? "Tra cứu dữ liệu tổ chức MCN trực thuộc." : activeTab === "news" ? "Tạo và quản lý các bài viết tin tức truyền thông." : "Theo dõi, kiểm tra và xử lý các hồ sơ KOL, MCN."}</small>
+            <p>{activeTab === "reports" ? "TIẾP NHẬN PHẢN ÁNH" : activeTab === "proposals" ? "ĐÓNG GÓP DỮ LIỆU CỘNG ĐỒNG" : activeTab === "kols" ? "QUẢN LÝ DỮ LIỆU" : activeTab === "mcns" ? "QUẢN LÝ DỮ LIỆU" : activeTab === "news" ? "QUẢN LÝ NỘI DUNG" : "QUẢN LÝ HỒ SƠ"}</p>
+            <h1>{activeTab === "reports" ? "Phản ánh & Khiếu nại" : activeTab === "proposals" ? "Đề xuất bổ sung thông tin KOL" : activeTab === "kols" ? "Danh sách KOL" : activeTab === "mcns" ? "Danh sách MCN" : activeTab === "news" ? "Quản lý tin tức" : "Hồ sơ đăng ký"}</h1>
+            <small>{activeTab === "reports" ? "Quản lý các phản ánh gửi từ biểu mẫu công khai." : activeTab === "proposals" ? "Tiếp nhận, kiểm tra và xử lý đề xuất do người dùng gửi từ trang KOL." : activeTab === "kols" ? "Tra cứu dữ liệu KOL đang hiển thị trên hệ thống." : activeTab === "mcns" ? "Tra cứu dữ liệu tổ chức MCN trực thuộc." : activeTab === "news" ? "Tạo và quản lý các bài viết tin tức truyền thông." : "Theo dõi, kiểm tra và xử lý các hồ sơ KOL, MCN."}</small>
           </div>
           <div className="admin-user-badge"><ShieldCheck size={19} /><span>{user.role === "super_admin" ? "Toàn quyền quản trị" : "Quyền xét duyệt"}</span></div>
         </div>
@@ -223,10 +236,11 @@ export function AdminPortal() {
 
         <section className="admin-list-card admin-report-queue"><div className="admin-list-card-heading"><div><h2>Phản ánh cần tiếp nhận</h2><p>Phản ánh gửi từ biểu mẫu công khai trên trang chủ.</p></div><span>{reportsLoading ? "Đang tải..." : `${reports.length} phản ánh`}</span></div><div className="admin-table-wrap"><table><thead><tr><th>Người gửi</th><th>Nhóm phản ánh</th><th>Nội dung</th><th>Trạng thái</th><th></th></tr></thead><tbody>{reports.map((report) => <tr key={report.report_id}><td><strong>{report.reporter_name}</strong><small>{report.reporter_phone}{report.reporter_email ? ` · ${report.reporter_email}` : ""}</small></td><td>{report.report_group}</td><td className="admin-report-content">{report.content}</td><td><span className={`admin-status ${report.status}`}>{reportStatusLabel(report.status)}</span></td><td>{report.status === "submitted" ? <button className="admin-take-report" disabled={updatingReportId === report.report_id} type="button" onClick={() => takeReport(report.report_id)}>{updatingReportId === report.report_id ? "Đang nhận..." : "Nhận xử lý"}</button> : <span className="admin-report-assigned">Đã tiếp nhận</span>}</td></tr>)}{!reportsLoading && reports.length === 0 && <tr><td className="admin-empty" colSpan={5}><FileText size={20} />Chưa có phản ánh mới.</td></tr>}</tbody></table></div></section>
 
-        {selectedApplication && <div className="admin-news-modal" onMouseDown={() => setSelectedApplication(null)}><section className="admin-detail" onMouseDown={(event) => event.stopPropagation()}><button className="admin-detail-close" type="button" onClick={() => setSelectedApplication(null)}><X size={18} /></button><div className="admin-detail-heading"><div><span className={`admin-status ${selectedApplication.status}`}>{statusLabel(selectedApplication.status)}</span><h2>{selectedApplication.display_name}</h2><p>{selectedApplication.email} · {selectedApplication.phone || "Chưa có số điện thoại"}</p></div></div><div className="admin-detail-grid"><div><strong>Danh mục</strong><span>{selectedApplication.categories?.map((item) => item.name).join(", ") || "—"}</span></div><div><strong>Kênh đăng ký</strong>{selectedApplication.channels?.length ? selectedApplication.channels.map((channel) => <a key={channel.url} href={channel.url} target="_blank" rel="noreferrer">{channel.platform}: {channel.name}</a>) : <span>Hồ sơ MCN dùng file Excel.</span>}</div><div><strong>File đính kèm</strong><span>Ảnh: {String(selectedApplication.avatar_file_name ?? "—")}</span>{selectedApplication.organization && <><span>Excel: {String(selectedApplication.organization.white_list_request_file_name ?? "—")}</span></>}</div></div><label className="admin-review-note">Ghi chú xét duyệt<textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="Nhập ghi chú nội bộ hoặc lý do từ chối" /></label>{error && <p className="admin-error admin-update-error">{error}</p>}<div className="admin-status-actions"><button disabled={updatingStatus} onClick={() => updateStatus("in_review")}>Nhận xử lý</button><button disabled={updatingStatus} onClick={() => updateStatus("approved")}>Duyệt</button><button disabled={updatingStatus} className="reject" onClick={() => updateStatus("rejected")}>Từ chối</button></div><h3>Lịch sử xét duyệt</h3>{selectedApplication.reviews?.map((review, index) => <p className="admin-review-history" key={index}>{statusLabel(review.nextStatus)} · {new Date(review.createdAt).toLocaleString("vi-VN")}{review.note ? ` — ${review.note}` : ""}</p>)}</section></div>}
-        {activeTab === "kols" && <AdminEntityManager type="kols" />}
-        {activeTab === "mcns" && <AdminEntityManager type="mcns" />}
-        {activeTab === "news" && <AdminNewsManager token={typeof window === "undefined" ? null : window.localStorage.getItem("kol_admin_token")} editable={user.role === "super_admin"} />}
+        {selectedApplication && <div className="admin-news-modal" onMouseDown={() => setSelectedApplication(null)}><section className="admin-detail" onMouseDown={(event) => event.stopPropagation()}><button className="admin-detail-close" type="button" onClick={() => setSelectedApplication(null)}><X size={18} /></button><div className="admin-detail-heading"><div><span className={`admin-status ${selectedApplication.status}`}>{statusLabel(selectedApplication.status)}</span><h2>{selectedApplication.display_name}</h2><p>{selectedApplication.email} · {selectedApplication.phone || "Chưa có số điện thoại"}</p></div></div><div className="admin-detail-grid"><div><strong>Danh mục</strong><span>{selectedApplication.categories?.map((item) => item.name).join(", ") || "—"}</span></div><div><strong>Kênh đăng ký</strong>{selectedApplication.channels?.length ? selectedApplication.channels.map((channel) => <a key={channel.url} href={channel.url} target="_blank" rel="noreferrer">{channel.platform}: {channel.name}</a>) : <span>Hồ sơ MCN dùng file Excel.</span>}</div><div><strong>File đính kèm</strong>{selectedApplication.avatar_url ? <a className="admin-application-avatar" href={selectedApplication.avatar_url} target="_blank" rel="noreferrer"><Image src={selectedApplication.avatar_url} alt={`Ảnh đại diện ${selectedApplication.display_name}`} width={42} height={42} /><span>{String(selectedApplication.avatar_file_name ?? "Ảnh đại diện")}</span></a> : <span>Ảnh: —</span>}{selectedApplication.organization && <><span>Excel: {String(selectedApplication.organization.white_list_request_file_name ?? "—")}</span></>}</div></div><label className="admin-review-note">Ghi chú xét duyệt<textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="Nhập ghi chú nội bộ hoặc lý do từ chối" /></label>{error && <p className="admin-error admin-update-error">{error}</p>}<div className="admin-status-actions"><button disabled={updatingStatus} onClick={() => updateStatus("in_review")}>Nhận xử lý</button><button disabled={updatingStatus} onClick={() => updateStatus("approved")}>Duyệt</button><button disabled={updatingStatus} className="reject" onClick={() => updateStatus("rejected")}>Từ chối</button></div><h3>Lịch sử xét duyệt</h3>{selectedApplication.reviews?.map((review, index) => <p className="admin-review-history" key={index}>{statusLabel(review.nextStatus)} · {new Date(review.createdAt).toLocaleString("vi-VN")}{review.note ? ` — ${review.note}` : ""}</p>)}</section></div>}
+        {activeTab === "proposals" && <AdminProposalManager token={typeof window === "undefined" ? null : window.localStorage.getItem("kol_admin_token")} onPendingCountChange={setProposalPendingCount} />}
+        {activeTab === "kols" && <AdminEntityManager type="kols" token={typeof window === "undefined" ? null : window.localStorage.getItem("kol_admin_token")} />}
+        {activeTab === "mcns" && <AdminEntityManager type="mcns" token={typeof window === "undefined" ? null : window.localStorage.getItem("kol_admin_token")} />}
+        {activeTab === "news" && <AdminNewsManager token={typeof window === "undefined" ? null : window.localStorage.getItem("kol_admin_token")} canCreateDelete={user.role === "super_admin"} />}
       </section>
     </main>
   );

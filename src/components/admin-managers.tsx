@@ -4,11 +4,12 @@ import { API_BASE_URL } from "@/lib/api";
 import { normalizeMediaUrl } from "@/lib/api-influencer";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { Activity, AlertTriangle, BarChart2, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, FileText, Globe, Heart, Info, Pencil, Plus, Search, ShieldCheck, Trash2, User, UserCheck, Users, X } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, Calendar, ChevronLeft, ChevronRight, ExternalLink, EyeOff, FileText, Globe, Heart, Info, Pencil, Plus, Search, ShieldCheck, Trash2, User, UserCheck, Users, X } from "lucide-react";
 import { AdminEntityEditor } from "./admin-entity-editor";
 
 const apiUrl = API_BASE_URL;
 type Page = { page: number; totalPages: number; total: number };
+// Legacy API field: true means verified + publicly visible; false means verified but hidden.
 type Entity = { influencer_key?: string; source_id?: string; name: string; nick_name?: string; subtitle?: string; channel_count?: number; total_channels?: number; total_kols?: number; identity_verified?: boolean; [key: string]: unknown };
 type News = { slug: string; sourceUrl: string; title: string; excerpt?: string; category?: string; imageUrl?: string; bodyText?: string; publishedDate?: string; isPublished?: boolean };
 const emptyPage: Page = { page: 1, totalPages: 0, total: 0 };
@@ -80,7 +81,7 @@ function AdminDetailAvatar({ name, source }: { name: string; source: unknown }) 
 function DetailPanel({ title, data, onClose }: { title: string; data: Record<string, unknown>; onClose: () => void }) {
   const name = String(data.name || data.title || "Chi tiết");
   const sub = String(data.nick_name || data.subtitle || "");
-  const verified = Boolean(data.identity_verified);
+  const isVisible = Boolean(data.identity_verified);
   const key = String(data.influencer_key || data.source_id || "");
 
   const channels = Array.isArray(data.channels) ? (data.channels as Array<Record<string, unknown>>) : [];
@@ -122,10 +123,10 @@ function DetailPanel({ title, data, onClose }: { title: string; data: Record<str
           <div className="admin-detail-profile-info">
             <div className="admin-detail-profile-title">
               <h2>{name}</h2>
-              {verified ? (
-                <span className="admin-status approved"><ShieldCheck size={12} /> Đã xác minh danh tính</span>
+              {isVisible ? (
+                <span className="admin-status approved"><Globe size={12} /> Đang hiển thị</span>
               ) : (
-                <span className="admin-status in_review"><CheckCircle2 size={12} /> Chưa xác minh danh tính</span>
+                <span className="admin-status in_review"><ShieldCheck size={12} /> Đã xác minh</span>
               )}
             </div>
             {sub && <p className="admin-detail-sub">{sub}</p>}
@@ -424,11 +425,13 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
       const payload = await response.json().catch(() => null) as { data?: { identityVerified?: boolean }; message?: string } | null;
       if (!response.ok) throw new Error(payload?.message ?? `Không thể thay đổi trạng thái ${label}.`);
       
-      const newVerified = payload?.data?.identityVerified;
+      const isNowVisible = payload?.data?.identityVerified;
       setSelected(null);
       setEditing(null);
       setPendingAction(null);
-      setMessage(newVerified ? `Đã xác minh danh tính cho ${label.toLowerCase()} “${item.name}”.` : `Đã hủy xác minh danh tính cho ${label.toLowerCase()} “${item.name}”.`);
+      setMessage(isNowVisible
+        ? `Đã hiển thị ${label.toLowerCase()} “${item.name}” trên frontend.`
+        : `Đã ẩn ${label.toLowerCase()} “${item.name}”; hồ sơ vẫn giữ trạng thái Đã xác minh.`);
       load();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
@@ -440,33 +443,31 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
   const promptToggleVisibility = (item: Entity) => {
     const id = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
     if (!id) return;
-    const isCurrentlyVerified = Boolean(item.identity_verified);
+    const isCurrentlyVisible = Boolean(item.identity_verified);
 
-    if (isCurrentlyVerified) {
-      // Prompt to unverify
+    if (isCurrentlyVisible) {
       setPendingAction({
         id,
         name: item.name,
         label,
         actionType: "hide",
-        title: `Hủy xác minh danh tính ${label}`,
-        message: `Bạn có muốn hủy trạng thái xác minh của ${label.toLowerCase()} “${item.name}” không?`,
-        note: `⚠️ Trạng thái sẽ chuyển thành "Chưa xác minh" và huy hiệu xác thực sẽ không còn hiển thị.`,
-        confirmLabel: "Xác nhận hủy xác minh",
+        title: `Ẩn ${label} khỏi frontend`,
+        message: `Bạn có muốn ẩn ${label.toLowerCase()} “${item.name}” khỏi giao diện công khai không?`,
+        note: `Hồ sơ sẽ chuyển về trạng thái "Đã xác minh" nhưng chưa hiển thị trên frontend. Dữ liệu vẫn được giữ nguyên.`,
+        confirmLabel: "Xác nhận ẩn",
         confirmStyle: "warning",
         onConfirm: () => executeToggleVisibility(item),
       });
     } else {
-      // Prompt to verify
       setPendingAction({
         id,
         name: item.name,
         label,
         actionType: "show",
-        title: `Xác minh danh tính ${label}`,
-        message: `Bạn có muốn xác minh danh tính cho ${label.toLowerCase()} “${item.name}” không?`,
-        note: `💡 Trạng thái sẽ chuyển thành "Đã xác minh" (hiển thị huy hiệu Đã xác minh trên hệ thống).`,
-        confirmLabel: "Xác nhận xác minh",
+        title: `Hiển thị ${label} trên frontend`,
+        message: `Bạn có muốn hiển thị ${label.toLowerCase()} “${item.name}” trên giao diện công khai không?`,
+        note: `Trạng thái sẽ chuyển thành "Đang hiển thị", đồng nghĩa hồ sơ đã xác minh và đang xuất hiện trên frontend.`,
+        confirmLabel: "Xác nhận hiển thị",
         confirmStyle: "primary",
         onConfirm: () => executeToggleVisibility(item),
       });
@@ -501,7 +502,7 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
           <tbody>
             {items.map((item) => {
               const itemId = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
-              const isVerified = Boolean(item.identity_verified);
+              const isVisible = Boolean(item.identity_verified);
               return (
                 <tr key={item.influencer_key ?? item.source_id} onClick={() => open(item)}>
                   <td>
@@ -511,9 +512,9 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
                   <td>{type === "kols" ? "Nhà sáng tạo nội dung" : `${item.total_kols ?? 0} KOL trực thuộc`}</td>
                   <td>{item.channel_count ?? item.total_channels ?? 0}</td>
                   <td>
-                    <span className={`admin-status ${isVerified ? "approved" : "in_review"}`}>
-                      <ShieldCheck size={12} />
-                      {isVerified ? "Đã xác minh" : "Chưa xác minh"}
+                    <span className={`admin-status ${isVisible ? "approved" : "in_review"}`}>
+                      {isVisible ? <Globe size={12} /> : <ShieldCheck size={12} />}
+                      {isVisible ? "Đang hiển thị" : "Đã xác minh"}
                     </span>
                   </td>
                   <td className="admin-entity-actions" onClick={(event) => event.stopPropagation()}>
@@ -524,14 +525,14 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
                       <Pencil size={15} />
                     </button>
                     <button
-                      className={isVerified ? "hide-action" : "show-action"}
+                      className={isVisible ? "hide-action" : "show-action"}
                       type="button"
                       disabled={togglingId === itemId}
                       onClick={() => promptToggleVisibility(item)}
-                      aria-label={isVerified ? `Hủy xác minh ${item.name}` : `Xác minh ${item.name}`}
-                      title={isVerified ? "Hủy xác minh danh tính" : "Xác minh danh tính"}
+                      aria-label={isVisible ? `Ẩn ${item.name}` : `Hiển thị ${item.name}`}
+                      title={isVisible ? "Đang hiển thị — nhấn để ẩn" : "Đã xác minh — nhấn để hiển thị"}
                     >
-                      {isVerified ? <EyeOff size={15} /> : <Globe size={15} />}
+                      {isVisible ? <EyeOff size={15} /> : <Globe size={15} />}
                     </button>
                   </td>
                 </tr>
@@ -707,8 +708,17 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
                     <Pencil size={15} />
                   </button>
                   {canCreateDelete && (
-                    <button className={item.isPublished === false ? "show-action" : "hide-action"} type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={item.isPublished === false ? `Hiện lại ${item.title}` : `Ẩn ${item.title}`} title={item.isPublished === false ? "Hiện bài viết" : "Ẩn khỏi frontend"}>
-                      {item.isPublished === false ? <Eye size={15} /> : <EyeOff size={15} />}
+                    <button
+                      className={item.isPublished === false ? "show-action" : "hide-action"}
+                      type="button"
+                      disabled={deletingSlug === item.slug}
+                      onClick={() => promptRemove(item)}
+                      aria-label={item.isPublished === false ? `Hiện lại ${item.title}` : `Ẩn ${item.title}`}
+                      title={item.isPublished === false
+                        ? "Đang ẩn — nhấn để hiện bài viết"
+                        : "Đang công khai — nhấn để ẩn khỏi frontend"}
+                    >
+                      {item.isPublished === false ? <Globe size={15} /> : <EyeOff size={15} />}
                     </button>
                   )}
                 </td>

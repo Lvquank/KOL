@@ -9,6 +9,7 @@ import {
   PlatformIcon,
   type DetailStat,
 } from "@/components/detail-shared";
+import { SafeAvatar } from "@/components/safe-avatar";
 import { formatCompactNumber, normalizeMediaUrl } from "@/lib/api-influencer";
 import type {
   ApiMcnDetailItem,
@@ -47,6 +48,7 @@ function rankClass(rank: number): string {
 
 function FeaturedChannelRow({ channel }: { channel: ApiMcnFeaturedChannel }) {
   const growth = Math.abs(Number(channel.growth_rate ?? 0));
+  const avatar = normalizeMediaUrl(channel.avatar_url);
   return (
     <li>
       <a
@@ -60,17 +62,12 @@ function FeaturedChannelRow({ channel }: { channel: ApiMcnFeaturedChannel }) {
             {channel.rank}
           </span>
         </span>
-        {normalizeMediaUrl(channel.avatar_url) ? (
-          <img
-            alt={channel.name}
-            src={normalizeMediaUrl(channel.avatar_url) || ""}
-            className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-sm flex-shrink-0"
-          />
-        ) : (
-          <span className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-[12px] font-bold text-gray-500">
-            {channel.name.slice(0, 1)}
-          </span>
-        )}
+        <SafeAvatar
+          src={avatar}
+          alt={channel.name}
+          className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-sm flex-shrink-0"
+          fallbackClassName="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-[12px] font-bold text-gray-500 flex-shrink-0"
+        />
         <span className="flex flex-col min-w-0 flex-1">
           <strong className="font-semibold text-gray-900 text-sm truncate group-hover:text-primary transition-colors">
             {channel.name}
@@ -106,17 +103,12 @@ function FeaturedInfluencerRow({ influencer }: { influencer: ApiMcnFeaturedInflu
             {influencer.rank}
           </span>
         </span>
-        {avatar ? (
-          <img
-            alt={influencer.name}
-            src={avatar}
-            className="h-10 w-10 flex-shrink-0 rounded-full border border-gray-100 object-cover shadow-sm"
-          />
-        ) : (
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-[12px] font-bold text-gray-500">
-            {influencer.name.slice(0, 1)}
-          </span>
-        )}
+        <SafeAvatar
+          src={avatar}
+          alt={influencer.name}
+          className="h-10 w-10 flex-shrink-0 rounded-full border border-gray-100 object-cover shadow-sm"
+          fallbackClassName="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-[12px] font-bold text-gray-500"
+        />
         <span className="flex min-w-0 flex-1 flex-col">
           <strong className="truncate text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary">
             {influencer.name}
@@ -175,7 +167,12 @@ export function McnDetail({ mcn }: McnDetailProps) {
               <div className="px-6 relative">
                 <div className="relative -mt-[52px] sm:-mt-[60px] inline-block">
                   <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-[4px] border-4 border-white overflow-hidden shadow-md bg-white">
-                    <img alt={mcn.name} src={avatar} className="w-full h-full object-cover" />
+                    <SafeAvatar
+                      alt={mcn.name}
+                      src={avatar}
+                      className="w-full h-full object-cover"
+                      fallbackClassName="flex w-full h-full items-center justify-center bg-gray-100 text-3xl font-bold text-gray-500"
+                    />
                   </div>
                 </div>
               </div>

@@ -11,7 +11,7 @@ export default async function McnDetailPage({
 }) {
   const { id } = await params;
   const mcn = await fetchMcnDetail(id);
-  if (!mcn) notFound();
+  if (!mcn?.identity_verified) notFound();
 
   return (
     <>

@@ -1,0 +1,9 @@
+{
+  "scannedAt": "2026-08-13",
+  "framework": "Next.js 16 with Tailwind CSS 4",
+  "fontStack": "Existing Be Vietnam Pro body stack",
+  "palette": "Existing KOL portal tokens anchored on --primary",
+  "motion": "motion-cut; CSS state transitions only",
+  "spacing": "Existing component spacing; 4px-aligned",
+  "preserve": ["font stack", "brand orange palette", "component ownership", "route structure"]
+}

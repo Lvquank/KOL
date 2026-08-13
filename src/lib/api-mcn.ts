@@ -45,6 +45,7 @@ export interface ApiMcnDetailItem {
   mcn_key?: string;
   name: string;
   subtitle: string | null;
+  identity_verified: boolean;
   avatar_url: string | null;
   platforms: string[];
   channels_by_type: Record<string, number>;
@@ -65,7 +66,12 @@ export async function fetchMcnDetail(sourceId: string): Promise<ApiMcnDetailItem
       cache: "no-store",
     });
     if (!response.ok) return null;
-    return (await response.json()) as ApiMcnDetailItem;
+    const item = (await response.json()) as ApiMcnDetailItem;
+    const resolvedSourceId = [item.source_id, item.mcn_key, sourceId]
+      .map((value) => String(value ?? "").trim())
+      .find(Boolean) ?? "";
+    if (!resolvedSourceId) return null;
+    return { ...item, source_id: resolvedSourceId };
   } catch (error) {
     console.warn(`Không thể tải dữ liệu MCN ${sourceId}:`, error);
     return null;

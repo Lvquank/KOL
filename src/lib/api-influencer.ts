@@ -128,7 +128,13 @@ async function fetchJson<T>(path: string): Promise<T | null> {
 }
 
 async function fetchInfluencerByKey(key: string): Promise<ApiInfluencerDetailItem | null> {
-  return fetchJson<ApiInfluencerDetailItem>(`/influencers/${encodeURIComponent(key)}`);
+  const item = await fetchJson<ApiInfluencerDetailItem>(`/influencers/${encodeURIComponent(key)}`);
+  if (!item) return null;
+  const resolvedKey = [item.influencer_key, key]
+    .map((value) => String(value ?? "").trim())
+    .find(Boolean) ?? "";
+  if (!resolvedKey) return null;
+  return { ...item, influencer_key: resolvedKey };
 }
 
 export async function fetchInfluencerDetail(idOrKey: string): Promise<ApiInfluencerDetailItem | null> {

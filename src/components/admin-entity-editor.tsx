@@ -177,7 +177,7 @@ export function AdminEntityEditor({ type, data, token, onClose, onSaved }: {
               <label className="admin-entity-edit-wide"><span>Đường dẫn nguồn *</span><input type="url" value={form.sourceUrl} onChange={(event) => update("sourceUrl", event.target.value)} required /></label>
               <label className="admin-entity-edit-check admin-entity-edit-wide">
                 <input type="checkbox" checked={form.identityVerified} onChange={(event) => update("identityVerified", event.target.checked)} />
-                <span><strong>Đã xác minh (Ẩn khỏi frontend)</strong> — Tích chọn nếu muốn ẩn KOL này khỏi giao diện người dùng công khai. Bỏ chọn để "Đang hiển thị".</span>
+                <span><strong>Đang hiển thị công khai</strong> — Tích chọn khi KOL đã xác minh và được phép xuất hiện trên frontend. Bỏ chọn để giữ trạng thái “Đã xác minh” nhưng chưa hiển thị.</span>
               </label>
             </>
           ) : (
@@ -188,7 +188,7 @@ export function AdminEntityEditor({ type, data, token, onClose, onSaved }: {
               <label><span>Tổng số KOL</span><input type="number" min="0" max="1000000" value={form.totalKols} onChange={(event) => update("totalKols", event.target.value)} required /></label>
               <label className="admin-entity-edit-check admin-entity-edit-wide">
                 <input type="checkbox" checked={form.identityVerified} onChange={(event) => update("identityVerified", event.target.checked)} />
-                <span><strong>Đã xác minh (Ẩn khỏi frontend)</strong> — Tích chọn nếu muốn ẩn MCN này khỏi giao diện người dùng công khai. Bỏ chọn để "Đang hiển thị".</span>
+                <span><strong>Đang hiển thị công khai</strong> — Tích chọn khi MCN đã xác minh và được phép xuất hiện trên frontend. Bỏ chọn để giữ trạng thái “Đã xác minh” nhưng chưa hiển thị.</span>
               </label>
             </>
           )}

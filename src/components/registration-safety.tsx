@@ -1,13 +1,19 @@
 "use client";
 
 import { API_BASE_URL } from "@/lib/api";
-import { ArrowRight, Check, MailWarning } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Mail } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type RegistrationType = "kol" | "mcn";
 const apiUrl = API_BASE_URL;
-const reportGroups = ["Nội dung vi phạm pháp luật", "Thông tin sai sự thật", "Quảng cáo vi phạm", "Giả mạo tài khoản/kênh", "Nội dung không phù hợp", "Khác"];
+const reportGroups = [
+  "Quảng cáo cờ bạc, cá độ",
+  "Bán hàng cấm (tiền giả, súng, động vật hoang dã...)",
+  "Nội dung phản động",
+  "Nghệ sĩ/KOL vi phạm (nói tục, nội dung nhạy cảm...)",
+  "Vi phạm khác"
+];
 
 export function RegistrationSafety() {
   const [selectedType, setSelectedType] = useState<RegistrationType | null>(null);
@@ -54,6 +60,33 @@ export function RegistrationSafety() {
       <ul><li><Check size={14} />Nhận dấu xác minh chính thức trên hồ sơ</li><li><Check size={14} />Tăng độ tin cậy với nhãn hàng và khách hàng</li><li><Check size={14} />Được hỗ trợ pháp lý khi có tranh chấp</li></ul>
       <button type="button" className="continue-button" disabled={!selectedType} onClick={() => selectedType && router.push(selectedType === "kol" ? "/nguoi-noi-tieng/khai-bao" : "/mcn/khai-bao")}>{selectedType ? `Tiếp tục với ${selectedLabel}` : "Chọn loại đăng ký để tiếp tục"} <ArrowRight size={17} /></button>
     </div>
-    <div className="report-panel"><h3><MailWarning />Phản ánh nội dung vi phạm<br />của KOL/Kênh nhanh chóng</h3><form className="report-form" onSubmit={submitReport}><input value={report.name} onChange={(event) => setReport({ ...report, name: event.target.value })} placeholder="Họ và tên (*)" /><input value={report.phone} inputMode="numeric" maxLength={10} onChange={(event) => setReport({ ...report, phone: event.target.value.replace(/\D/g, "") })} placeholder="Số điện thoại (*)" /><input value={report.email} type="email" onChange={(event) => setReport({ ...report, email: event.target.value })} placeholder="Email" /><select value={report.group} onChange={(event) => setReport({ ...report, group: event.target.value })}><option value="">Nhóm phản ánh (*)</option>{reportGroups.map((group) => <option key={group} value={group}>{group}</option>)}</select><textarea value={report.content} maxLength={2000} onChange={(event) => setReport({ ...report, content: event.target.value })} placeholder="Nhập nội dung phản ánh (*)" /><small>{report.content.length}/2000</small>{reportError && <p className="report-error">{reportError}</p>}{reportSuccess && <p className="report-success">{reportSuccess}</p>}<button type="submit" disabled={sending}>{sending ? "Đang gửi..." : "Gửi phản ánh"}</button></form><p className="form-safety">Thông tin phản ánh được chuyển tới bộ phận tiếp nhận để xử lý.</p></div>
+    <div className="report-panel">
+      <div className="report-header">
+        <div className="report-icon-box">
+          <Mail size={22} strokeWidth={2} />
+        </div>
+        <h3>Phản ánh nội dung vi phạm<br />của KOL/Kênh nhanh chóng</h3>
+      </div>
+      <form className="report-form" onSubmit={submitReport}>
+        <input value={report.name} onChange={(event) => setReport({ ...report, name: event.target.value })} placeholder="Họ và tên (*)" />
+        <input value={report.phone} inputMode="numeric" maxLength={10} onChange={(event) => setReport({ ...report, phone: event.target.value.replace(/\D/g, "") })} placeholder="Số điện thoại (*)" />
+        <input value={report.email} type="email" onChange={(event) => setReport({ ...report, email: event.target.value })} placeholder="Email" />
+        <div className="select-wrapper">
+          <select value={report.group} className={report.group ? "has-value" : "is-empty"} onChange={(event) => setReport({ ...report, group: event.target.value })}>
+            <option value="" disabled hidden>Nhóm phản ánh (*)</option>
+            {reportGroups.map((group) => <option key={group} value={group}>{group}</option>)}
+          </select>
+          <ChevronDown size={18} className="select-icon" />
+        </div>
+        <div className="textarea-wrapper">
+          <textarea value={report.content} maxLength={2000} onChange={(event) => setReport({ ...report, content: event.target.value })} placeholder="Nhập nội dung phản ánh (*)" />
+          <small className="char-count">{report.content.length}/2000</small>
+        </div>
+        {reportError && <p className="report-error">{reportError}</p>}
+        {reportSuccess && <p className="report-success">{reportSuccess}</p>}
+        <button type="submit" className="report-submit-btn" disabled={sending}>{sending ? "Đang gửi..." : "Gửi phản ánh"}</button>
+      </form>
+    </div>
   </section>;
 }
+

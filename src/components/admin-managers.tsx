@@ -123,9 +123,9 @@ function DetailPanel({ title, data, onClose }: { title: string; data: Record<str
             <div className="admin-detail-profile-title">
               <h2>{name}</h2>
               {verified ? (
-                <span className="admin-status in_review"><ShieldCheck size={12} /> Đã xác minh (Ẩn khỏi frontend)</span>
+                <span className="admin-status approved"><ShieldCheck size={12} /> Đã xác minh danh tính</span>
               ) : (
-                <span className="admin-status approved"><CheckCircle2 size={12} /> Đang hiển thị</span>
+                <span className="admin-status in_review"><CheckCircle2 size={12} /> Chưa xác minh danh tính</span>
               )}
             </div>
             {sub && <p className="admin-detail-sub">{sub}</p>}
@@ -428,7 +428,7 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
       setSelected(null);
       setEditing(null);
       setPendingAction(null);
-      setMessage(newVerified ? `Đã ẩn ${label} “${item.name}” (trạng thái: Đã xác minh).` : `Đã hiển thị ${label} “${item.name}” lên frontend (trạng thái: Đang hiển thị).`);
+      setMessage(newVerified ? `Đã xác minh danh tính cho ${label.toLowerCase()} “${item.name}”.` : `Đã hủy xác minh danh tính cho ${label.toLowerCase()} “${item.name}”.`);
       load();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
@@ -440,34 +440,34 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
   const promptToggleVisibility = (item: Entity) => {
     const id = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
     if (!id) return;
-    const isCurrentlyHidden = Boolean(item.identity_verified);
+    const isCurrentlyVerified = Boolean(item.identity_verified);
 
-    if (isCurrentlyHidden) {
-      // Prompt to SHOW on frontend
-      setPendingAction({
-        id,
-        name: item.name,
-        label,
-        actionType: "show",
-        title: `Hiển thị lại ${label} lên frontend`,
-        message: `Bạn có muốn hiển thị lại ${label.toLowerCase()} “${item.name}” trên frontend không?`,
-        note: `💡 Trạng thái sẽ chuyển thành "Đang hiển thị" và mục này sẽ xuất hiện trở lại trên giao diện công khai.`,
-        confirmLabel: "Xác nhận hiển thị",
-        confirmStyle: "primary",
-        onConfirm: () => executeToggleVisibility(item),
-      });
-    } else {
-      // Prompt to HIDE from frontend
+    if (isCurrentlyVerified) {
+      // Prompt to unverify
       setPendingAction({
         id,
         name: item.name,
         label,
         actionType: "hide",
-        title: `Ẩn ${label} khỏi frontend`,
-        message: `Bạn có chắc chắn muốn ẩn ${label.toLowerCase()} “${item.name}” khỏi frontend không?`,
-        note: `⚠️ Trạng thái sẽ chuyển thành "Đã xác minh" và mục này sẽ không còn hiển thị trên giao diện người dùng công khai.`,
-        confirmLabel: "Xác nhận ẩn",
+        title: `Hủy xác minh danh tính ${label}`,
+        message: `Bạn có muốn hủy trạng thái xác minh của ${label.toLowerCase()} “${item.name}” không?`,
+        note: `⚠️ Trạng thái sẽ chuyển thành "Chưa xác minh" và huy hiệu xác thực sẽ không còn hiển thị.`,
+        confirmLabel: "Xác nhận hủy xác minh",
         confirmStyle: "warning",
+        onConfirm: () => executeToggleVisibility(item),
+      });
+    } else {
+      // Prompt to verify
+      setPendingAction({
+        id,
+        name: item.name,
+        label,
+        actionType: "show",
+        title: `Xác minh danh tính ${label}`,
+        message: `Bạn có muốn xác minh danh tính cho ${label.toLowerCase()} “${item.name}” không?`,
+        note: `💡 Trạng thái sẽ chuyển thành "Đã xác minh" (hiển thị huy hiệu Đã xác minh trên hệ thống).`,
+        confirmLabel: "Xác nhận xác minh",
+        confirmStyle: "primary",
         onConfirm: () => executeToggleVisibility(item),
       });
     }
@@ -501,7 +501,7 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
           <tbody>
             {items.map((item) => {
               const itemId = String(type === "kols" ? item.influencer_key ?? "" : item.source_id ?? "");
-              const isHidden = Boolean(item.identity_verified);
+              const isVerified = Boolean(item.identity_verified);
               return (
                 <tr key={item.influencer_key ?? item.source_id} onClick={() => open(item)}>
                   <td>
@@ -511,9 +511,9 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
                   <td>{type === "kols" ? "Nhà sáng tạo nội dung" : `${item.total_kols ?? 0} KOL trực thuộc`}</td>
                   <td>{item.channel_count ?? item.total_channels ?? 0}</td>
                   <td>
-                    <span className={`admin-status ${isHidden ? "in_review" : "approved"}`}>
-                      {isHidden ? <ShieldCheck size={12} /> : <CheckCircle2 size={12} />}
-                      {isHidden ? "Đã xác minh" : "Đang hiển thị"}
+                    <span className={`admin-status ${isVerified ? "approved" : "in_review"}`}>
+                      <ShieldCheck size={12} />
+                      {isVerified ? "Đã xác minh" : "Chưa xác minh"}
                     </span>
                   </td>
                   <td className="admin-entity-actions" onClick={(event) => event.stopPropagation()}>
@@ -524,14 +524,14 @@ export function AdminEntityManager({ type, token, canDelete: _canDelete }: { typ
                       <Pencil size={15} />
                     </button>
                     <button
-                      className={isHidden ? "show-action" : "hide-action"}
+                      className={isVerified ? "hide-action" : "show-action"}
                       type="button"
                       disabled={togglingId === itemId}
                       onClick={() => promptToggleVisibility(item)}
-                      aria-label={isHidden ? `Hiển thị ${item.name} lên frontend` : `Ẩn ${item.name} khỏi frontend`}
-                      title={isHidden ? "Hiển thị lên frontend" : "Ẩn khỏi frontend"}
+                      aria-label={isVerified ? `Hủy xác minh ${item.name}` : `Xác minh ${item.name}`}
+                      title={isVerified ? "Hủy xác minh danh tính" : "Xác minh danh tính"}
                     >
-                      {isHidden ? <Globe size={15} /> : <EyeOff size={15} />}
+                      {isVerified ? <EyeOff size={15} /> : <Globe size={15} />}
                     </button>
                   </td>
                 </tr>

@@ -10,7 +10,7 @@ import { AdminEntityEditor } from "./admin-entity-editor";
 const apiUrl = API_BASE_URL;
 type Page = { page: number; totalPages: number; total: number };
 type Entity = { influencer_key?: string; source_id?: string; name: string; nick_name?: string; subtitle?: string; channel_count?: number; total_channels?: number; total_kols?: number; identity_verified?: boolean; [key: string]: unknown };
-type News = { slug: string; sourceUrl: string; title: string; excerpt?: string; category?: string; imageUrl?: string; bodyText?: string; publishedDate?: string };
+type News = { slug: string; sourceUrl: string; title: string; excerpt?: string; category?: string; imageUrl?: string; bodyText?: string; publishedDate?: string; isPublished?: boolean };
 const emptyPage: Page = { page: 1, totalPages: 0, total: 0 };
 
 function visiblePageNumbers(currentPage: number, totalPages: number): Array<number | "ellipsis"> {
@@ -595,7 +595,7 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
     load();
   };
 
-  const executeRemove = async (item: News) => {
+  const executeToggleVisibility = async (item: News) => {
     if (!token) {
       setMessage("Phiên đăng nhập quản trị đã hết hạn.");
       setPendingAction(null);
@@ -605,17 +605,20 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
     setDeletingSlug(item.slug);
     setMessage("");
     try {
-      const response = await fetch(`${apiUrl}/admin/news/${encodeURIComponent(item.slug)}`, {
-        method: "DELETE",
+      const isCurrentlyPublished = item.isPublished !== false;
+      const endpoint = isCurrentlyPublished
+        ? `${apiUrl}/admin/news/${encodeURIComponent(item.slug)}`
+        : `${apiUrl}/admin/news/${encodeURIComponent(item.slug)}/toggle-visibility`;
+      const response = await fetch(endpoint, {
+        method: isCurrentlyPublished ? "DELETE" : "POST",
         headers: { authorization: `Bearer ${token}` }
       });
-      const payload = response.status === 204 ? null : await response.json().catch(() => null) as { message?: string } | null;
-      if (!response.ok) throw new Error(payload?.message ?? "Không thể xóa tin tức.");
+      const payload = await response.json().catch(() => null) as { message?: string } | null;
+      if (!response.ok) throw new Error(payload?.message ?? "Không thể cập nhật trạng thái tin tức.");
       setSelected(null);
       setPendingAction(null);
-      setMessage(`Đã xóa tin tức “${item.title}”.`);
-      if (items.length === 1 && page > 1) setPage((current) => current - 1);
-      else load();
+      setMessage(`Đã ${isCurrentlyPublished ? "ẩn" : "hiện lại"} tin tức “${item.title}”.`);
+      load();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Không thể kết nối tới máy chủ.");
     } finally {
@@ -624,17 +627,22 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
   };
 
   const promptRemove = (item: News) => {
+    const isHidden = item.isPublished === false;
     setPendingAction({
       id: item.slug,
       name: item.title,
       label: "tin tức",
-      actionType: "delete",
-      title: "Xác nhận xóa tin tức",
-      message: `Bạn có chắc chắn muốn xóa tin tức “${item.title}” không?`,
-      note: "⚠️ Toàn bộ dữ liệu bài viết sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
-      confirmLabel: "Xác nhận xóa",
-      confirmStyle: "danger",
-      onConfirm: () => executeRemove(item),
+      actionType: isHidden ? "show" : "hide",
+      title: isHidden ? "Hiện lại tin tức" : "Ẩn tin tức khỏi trang chủ",
+      message: isHidden
+        ? `Bạn có chắc chắn muốn HỆN lại bài viết “${item.title}” trên trang tin tức công khai?`
+        : `Bạn có chắc chắn muốn ẨN bài viết “${item.title}” khỏi trang công khai?`,
+      note: isHidden
+        ? "Bài viết sẽ xuất hiện trở lại trên trang chủ và trang tin tức."
+        : "ℹ️ Bài viết sẽ ẩn khỏi frontend nhưng vẫn lưu đầy đủ dữ liệu trong cơ sở dữ liệu.",
+      confirmLabel: isHidden ? "Hiện lại bài viết" : "Xác nhận ẩn",
+      confirmStyle: isHidden ? "primary" : "danger",
+      onConfirm: () => executeToggleVisibility(item),
     });
   };
 
@@ -687,20 +695,20 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.slug} onClick={() => openNews(item)}>
+              <tr key={item.slug} onClick={() => openNews(item)} title="Bấm để xem chi tiết bài viết">
                 <td className="admin-news-title">
                   <strong title={item.title}>{item.title}</strong>
-                  <small>{item.slug}</small>
+                  <small title={item.slug}>{item.slug}</small>
                 </td>
                 <td>{item.category || "—"}</td>
                 <td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td>
                 <td className="admin-news-actions" onClick={(event) => event.stopPropagation()}>
-                  <button type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }} aria-label={`Chỉnh sửa ${item.title}`} title="Chỉnh sửa">
-                    <Pencil size={14} />
+                  <button className="edit" type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }} aria-label={`Chỉnh sửa ${item.title}`} title="Chỉnh sửa">
+                    <Pencil size={15} />
                   </button>
                   {canCreateDelete && (
-                    <button className="delete" type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={`Xóa ${item.title}`} title="Xóa tin tức">
-                      <Trash2 size={14} />
+                    <button className={item.isPublished === false ? "show-action" : "delete"} type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={item.isPublished === false ? `Hiện lại ${item.title}` : `Ẩn ${item.title}`} title={item.isPublished === false ? "Hiện bài viết" : "Ẩn khỏi frontend"}>
+                      {item.isPublished === false ? <Globe size={15} /> : <Trash2 size={15} />}
                     </button>
                   )}
                 </td>

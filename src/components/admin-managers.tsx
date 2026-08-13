@@ -700,15 +700,15 @@ export function AdminNewsManager({ token, canCreateDelete }: { token: string | n
                   <strong title={item.title}>{item.title}</strong>
                   <small title={item.slug}>{item.slug}</small>
                 </td>
-                <td>{item.category || "—"}</td>
+                <td className="admin-news-category" title={item.category || undefined}>{item.category || "—"}</td>
                 <td>{item.publishedDate ? new Date(item.publishedDate).toLocaleDateString("vi-VN") : "—"}</td>
                 <td className="admin-news-actions" onClick={(event) => event.stopPropagation()}>
                   <button className="edit" type="button" onClick={() => { setForm(item); setEditing(true); setFormOpen(true); }} aria-label={`Chỉnh sửa ${item.title}`} title="Chỉnh sửa">
                     <Pencil size={15} />
                   </button>
                   {canCreateDelete && (
-                    <button className={item.isPublished === false ? "show-action" : "delete"} type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={item.isPublished === false ? `Hiện lại ${item.title}` : `Ẩn ${item.title}`} title={item.isPublished === false ? "Hiện bài viết" : "Ẩn khỏi frontend"}>
-                      {item.isPublished === false ? <Globe size={15} /> : <Trash2 size={15} />}
+                    <button className={item.isPublished === false ? "show-action" : "hide-action"} type="button" disabled={deletingSlug === item.slug} onClick={() => promptRemove(item)} aria-label={item.isPublished === false ? `Hiện lại ${item.title}` : `Ẩn ${item.title}`} title={item.isPublished === false ? "Hiện bài viết" : "Ẩn khỏi frontend"}>
+                      {item.isPublished === false ? <Eye size={15} /> : <EyeOff size={15} />}
                     </button>
                   )}
                 </td>

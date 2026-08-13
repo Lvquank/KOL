@@ -102,12 +102,8 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
   }
 
   async function submitProposal() {
-    if (entity !== "KOL") {
-      setSubmitted(true);
-      return;
-    }
     if (!entityKey) {
-      setSubmitError("Không xác định được KOL cần bổ sung thông tin.");
+      setSubmitError(`Không xác định được ${entity} cần bổ sung thông tin.`);
       return;
     }
     setSubmitting(true);
@@ -117,7 +113,10 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          influencerKey: entityKey,
+          entityType: entity,
+          entityKey,
+          influencerKey: entity === "KOL" ? entityKey : undefined,
+          mcnKey: entity === "MCN" ? entityKey : undefined,
           proposalType: selectedOption,
           details,
           submitterEmail: email,
@@ -217,12 +216,10 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                 <div className="flex flex-col items-center py-6 text-center" aria-live="polite">
                   <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                   <h3 className="mt-3 text-[15px] font-extrabold text-gray-900">
-                    {entity === "KOL" ? "Đã gửi đề xuất" : "Đã kiểm tra nội dung đề xuất"}
+                    Đã gửi đề xuất bổ sung thông tin
                   </h3>
                   <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-gray-500">
-                    {entity === "KOL"
-                      ? "Cảm ơn bạn đã đóng góp. Bộ phận quản trị sẽ kiểm tra nội dung trước khi cập nhật hồ sơ KOL."
-                      : "Đề xuất cho MCN hiện chưa được tiếp nhận trong hệ thống quản trị."}
+                    Cảm ơn bạn đã đóng góp. Bộ phận quản trị sẽ kiểm tra nội dung trước khi cập nhật hồ sơ {entity}.
                   </p>
                   {proposalId ? <code className="mt-3 rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-500">Mã: {proposalId}</code> : null}
                 </div>
@@ -309,7 +306,7 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                   </label>
                   <div className="flex gap-2 rounded-[4px] border border-blue-100 bg-blue-50 p-3 text-[11px] leading-relaxed text-blue-700">
                     <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <p>{entity === "KOL" ? "Sau khi gửi, đề xuất sẽ xuất hiện trong hàng đợi xử lý riêng của quản trị viên." : "Hiện hệ thống mới tiếp nhận đề xuất bổ sung cho KOL."}</p>
+                    <p>Sau khi gửi, đề xuất sẽ xuất hiện trong hàng đợi xử lý riêng của quản trị viên.</p>
                   </div>
                   {submitError ? <p className="rounded-[4px] bg-red-50 px-3 py-2 text-[11px] text-red-600" role="alert">{submitError}</p> : null}
                 </div>

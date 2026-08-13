@@ -2422,7 +2422,9 @@ img{display:block;object-fit:cover}
   text-align: right;
 }
 
-.admin-news-title {
+.admin-news-title,
+.admin-news-category,
+.admin-news-manager .admin-table-wrap td {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2651,6 +2653,20 @@ img{display:block;object-fit:cover}
 .admin-news-actions a.show-action:hover {
   border-color: #16a34a;
   background: #16a34a;
+  color: #ffffff;
+}
+
+.admin-news-actions button.hide-action,
+.admin-entity-actions button.hide-action {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.admin-news-actions button.hide-action:hover,
+.admin-entity-actions button.hide-action:hover {
+  border-color: #ea580c;
+  background: #ea580c;
   color: #ffffff;
 }
 

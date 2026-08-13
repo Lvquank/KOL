@@ -264,7 +264,7 @@ export function McnDetail({ mcn }: McnDetailProps) {
               <DetailStats items={stats} />
             </div>
             <div className="lg:hidden mb-6 px-4 sm:px-0">
-              <ContributionCard entity="MCN" entityName={mcn.name} />
+              <ContributionCard entity="MCN" entityName={mcn.name} entityKey={mcn.source_id} />
             </div>
           </div>
 
@@ -273,7 +273,7 @@ export function McnDetail({ mcn }: McnDetailProps) {
               <h3 className="font-extrabold text-gray-900 text-[14px] mb-4">Số liệu nổi bật</h3>
               <DetailStats items={stats} />
             </div>
-            <ContributionCard entity="MCN" entityName={mcn.name} />
+            <ContributionCard entity="MCN" entityName={mcn.name} entityKey={mcn.source_id} />
           </aside>
         </div>
       </div>

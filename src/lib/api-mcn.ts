@@ -42,6 +42,7 @@ export interface ApiMcnGrowthRanking {
 
 export interface ApiMcnDetailItem {
   source_id: string;
+  mcn_key?: string;
   name: string;
   subtitle: string | null;
   avatar_url: string | null;

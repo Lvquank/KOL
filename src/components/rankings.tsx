@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowRight, Search, Star, TrendingUp, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { featuredPeople, networkRows, peopleRows } from "@/data/content";
+import { normalizeMediaUrl } from "@/lib/api-influencer";
 import {
   apiGet,
   type ApiListResponse,
@@ -31,15 +32,8 @@ function PeriodToggle({ value, onChange, label }: { value: Period; onChange: (va
   );
 }
 
-function resolveImageUrl(value: string | null): string | null {
-  if (!value) return null;
-  if (value.startsWith("/")) return value;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://kol.gov.vn/${value.replace(/^\/+/, "")}`;
-}
-
 function DataImage({ src, fallback, alt, className }: { src: string | null; fallback: string; alt: string; className?: string }) {
-  const resolved = resolveImageUrl(src);
+  const resolved = normalizeMediaUrl(src);
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const currentSource = resolved && failedSource !== resolved ? resolved : fallback;
   return <img className={className} src={currentSource} alt={alt} onError={() => resolved && setFailedSource(resolved)} />;

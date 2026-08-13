@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CheckCircle2, Info, LoaderCircle, ShieldCheck, TrendingUp } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import { featuredPeople, networkRows, peopleRows } from "@/data/content";
+import { normalizeMediaUrl } from "@/lib/api-influencer";
 import {
   apiGet,
   type ApiListResponse,
@@ -68,20 +69,14 @@ function formatMetric(value: number): string {
   return formatter.format(absolute);
 }
 
-function resolveImageUrl(value: string | null): string | null {
-  if (!value) return null;
-  if (value.startsWith("/")) return value;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://kol.gov.vn/${value.replace(/^\/+/, "")}`;
-}
-
 function DirectoryAvatar({ row, kind }: { row: DirectoryRow; kind: DirectoryKind }) {
-  const remote = resolveImageUrl(row.avatar_url);
+  const remote = normalizeMediaUrl(row.avatar_url);
   const fallback = kind === "owner"
     ? networkRows.find((item) => item.rank === row.rank)?.image || "/assets/mcn/vccorp.webp"
     : peopleFallbacks.find((item) => item.rank === row.rank)?.image || "/assets/kols/ivan.jpg";
-  const [failed, setFailed] = useState(false);
-  return <img src={!failed && remote ? remote : fallback} alt={row.name} onError={() => setFailed(true)} />;
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const currentSource = remote && failedSource !== remote ? remote : fallback;
+  return <img src={currentSource} alt={row.name} onError={() => remote && setFailedSource(remote)} />;
 }
 
 function PlatformIcon({ platform }: { platform: Exclude<Platform, "all"> }) {

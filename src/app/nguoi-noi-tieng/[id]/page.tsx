@@ -12,7 +12,7 @@ export default async function InfluencerPage({
   const { id } = await params;
   const influencer = await fetchInfluencerDetail(id);
 
-  if (!influencer) {
+  if (!influencer?.identity_verified) {
     notFound();
   }
 

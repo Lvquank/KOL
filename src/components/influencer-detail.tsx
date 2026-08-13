@@ -3,8 +3,8 @@
 import {
   Activity,
   BarChart3,
-  Clock,
   ExternalLink,
+  Globe,
   Heart,
   ShieldCheck,
   Users,
@@ -117,15 +117,15 @@ export function InfluencerDetail({ influencer }: InfluencerDetailProps) {
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold ${
                       influencer.identity_verified
                         ? "bg-emerald-50 border-emerald-100 text-emerald-600"
-                        : "bg-amber-50 border-amber-100 text-amber-600"
+                        : "bg-blue-50 border-blue-100 text-blue-600"
                     }`}
                   >
                     {influencer.identity_verified ? (
-                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <Globe className="w-3.5 h-3.5" />
                     ) : (
-                      <Clock className="w-3.5 h-3.5" />
+                      <ShieldCheck className="w-3.5 h-3.5" />
                     )}
-                    {influencer.identity_verified ? "Đã xác minh" : "Đang chờ xác minh"}
+                    {influencer.identity_verified ? "Đang hiển thị" : "Đã xác minh"}
                   </span>
                 </div>
               </div>

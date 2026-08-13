@@ -76,7 +76,7 @@ export function DetailStats({ items }: { items: DetailStat[] }) {
   );
 }
 
-export function ContributionCard({ entity, entityName, entityKey }: { entity: "KOL" | "MCN"; entityName: string; entityKey?: string }) {
+export function ContributionCard({ entity, entityName, entityKey }: { entity: "KOL" | "MCN"; entityName: string; entityKey: string }) {
   return (
     <div className="bg-white rounded-[4px] border border-gray-200 shadow-[0_2px_10px_rgba(0,0,0,0.04)] p-5 flex flex-col text-center gap-3">
       <Info className="w-7 h-7 text-primary self-start" />

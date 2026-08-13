@@ -15,7 +15,7 @@ const fields = [
   ["name", "Họ và tên"],
   ["nick_name", "Biệt danh / Nghệ danh"],
   ["gender", "Giới tính"],
-  ["identity_verified", "Đã xác minh danh tính"],
+  ["identity_verified", "Đã xác minh và đang hiển thị công khai"],
   ["channel_type", "Loại kênh (TikTok, YouTube, Facebook...)"],
   ["channel_name", "Tên kênh"],
   ["channel_url", "URL kênh"],

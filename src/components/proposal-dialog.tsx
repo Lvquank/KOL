@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Info, X } from "lucide-react";
+import { Check, CheckCircle2, Info, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/lib/api";
@@ -8,7 +8,7 @@ import { API_BASE_URL } from "@/lib/api";
 type ProposalDialogProps = {
   entity: "KOL" | "MCN";
   entityName: string;
-  entityKey?: string;
+  entityKey: string;
 };
 
 const MCN_OPTION_GROUPS = [
@@ -48,6 +48,7 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
   const titleId = useId();
   const descriptionId = useId();
   const optionGroups = entity === "MCN" ? MCN_OPTION_GROUPS : KOL_OPTION_GROUPS;
+  const resolvedEntityKey = typeof entityKey === "string" ? entityKey.trim() : "";
 
   function resetDialog() {
     setStep(1);
@@ -102,7 +103,7 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
   }
 
   async function submitProposal() {
-    if (!entityKey) {
+    if (!resolvedEntityKey) {
       setSubmitError(`Không xác định được ${entity} cần bổ sung thông tin.`);
       return;
     }
@@ -114,9 +115,9 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           entityType: entity,
-          entityKey,
-          influencerKey: entity === "KOL" ? entityKey : undefined,
-          mcnKey: entity === "MCN" ? entityKey : undefined,
+          entityKey: resolvedEntityKey,
+          influencerKey: entity === "KOL" ? resolvedEntityKey : undefined,
+          mcnKey: entity === "MCN" ? resolvedEntityKey : undefined,
           proposalType: selectedOption,
           details,
           submitterEmail: email,
@@ -155,7 +156,7 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
 
       {open ? createPortal((
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-3"
+          className="proposal-dialog-backdrop"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDialog();
           }}
@@ -167,34 +168,37 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
             tabIndex={-1}
-            className="flex max-h-[calc(100vh-24px)] w-full max-w-[640px] flex-col overflow-hidden rounded-[6px] bg-white shadow-2xl outline-none"
+            className="proposal-dialog-panel"
             onKeyDown={trapFocus}
           >
-            <header className="flex items-start justify-between border-b border-gray-100 px-6 py-5 sm:px-6 sm:py-6">
-              <div className="min-w-0">
-                <h2 id={titleId} className="text-[18px] font-extrabold leading-tight text-gray-900 sm:text-[20px]">
+            <header className="proposal-dialog-header">
+              <div className="proposal-dialog-heading">
+                <h2 id={titleId} className="proposal-dialog-title">
                   Gửi đề xuất bổ sung thông tin
                 </h2>
-                <p id={descriptionId} className="mt-1 truncate text-[14px] text-gray-400 sm:text-[15px]">
+                <p id={descriptionId} className="proposal-dialog-entity">
                   {entityName} · kol.gov.vn
                 </p>
-                <div className="mt-4 flex items-center gap-2 sm:gap-3" aria-label={`Bước ${step} trên 3`}>
+                <div className="proposal-dialog-steps" aria-label={`Bước ${step} trên 3`}>
                   {["Thông tin", "Chi tiết", "Cam đoan"].map((label, index) => {
                     const number = index + 1;
                     const active = number <= step;
                     return (
-                      <div key={label} className="flex items-center gap-2 sm:gap-3">
+                      <div
+                        key={label}
+                        className="proposal-dialog-step"
+                        data-active={active || undefined}
+                        data-current={number === step || undefined}
+                      >
                         <span
-                          className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${
-                            active ? "bg-primary text-white" : "bg-gray-100 text-gray-400"
-                          }`}
+                          className="proposal-dialog-step-number"
                         >
                           {number}
                         </span>
-                        <span className={`text-[13px] sm:text-[14px] ${number === step ? "font-semibold text-primary" : "text-gray-400"}`}>
+                        <span className="proposal-dialog-step-label">
                           {label}
                         </span>
-                        {number < 3 ? <span className="h-px w-4 bg-gray-200 sm:w-8" aria-hidden="true" /> : null}
+                        {number < 3 ? <span className="proposal-dialog-step-divider" aria-hidden="true" /> : null}
                       </div>
                     );
                   })}
@@ -204,14 +208,14 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                 ref={closeRef}
                 type="button"
                 aria-label="Đóng"
-                className="ml-4 mt-0.5 rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="proposal-dialog-close"
                 onClick={closeDialog}
               >
-                <X className="h-5 w-5" />
+                <X aria-hidden="true" />
               </button>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+            <div className="proposal-dialog-body">
               {submitted ? (
                 <div className="flex flex-col items-center py-6 text-center" aria-live="polite">
                   <CheckCircle2 className="h-10 w-10 text-emerald-600" />
@@ -226,14 +230,14 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
               ) : null}
 
               {!submitted && step === 1 ? (
-                <div className="space-y-3.5">
-                  <p className="text-[15px] font-semibold text-gray-800 sm:text-[16px]">
+                <div className="proposal-dialog-options">
+                  <p className="proposal-dialog-question">
                     Bạn muốn đề xuất bổ sung thông tin gì? <span className="text-red-500">*</span>
                   </p>
                   {optionGroups.map((group) => (
-                    <fieldset key={group.label}>
-                      <legend className="mb-2 text-[13px] font-bold uppercase text-gray-400">{group.label}</legend>
-                      <div className="flex flex-wrap gap-2">
+                    <fieldset key={group.label} className="proposal-dialog-option-group">
+                      <legend className="proposal-dialog-option-label">{group.label}</legend>
+                      <div className="proposal-dialog-option-list">
                         {group.options.map((option) => {
                           const selected = selectedOption === option;
                           return (
@@ -241,14 +245,12 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                               key={option}
                               type="button"
                               aria-pressed={selected}
-                              className={`min-h-10 rounded-full border px-4 py-2 text-left text-[14px] font-medium leading-snug transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:text-[15px] ${
-                                selected
-                                  ? "border-primary bg-orange-50 text-primary"
-                                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-800"
-                              }`}
+                              className="proposal-dialog-choice"
+                              data-state={selected ? "selected" : "default"}
                               onClick={() => setSelectedOption(option)}
                             >
-                              {option}
+                              {selected ? <Check className="proposal-dialog-choice-check" aria-hidden="true" /> : null}
+                              <span>{option}</span>
                             </button>
                           );
                         })}
@@ -313,11 +315,12 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
               ) : null}
             </div>
 
-            <footer className="flex items-center justify-between gap-3 border-t border-gray-100 px-6 py-5 sm:px-6 sm:py-6">
+            <footer className="proposal-dialog-footer">
               {submitted ? (
                 <button
                   type="button"
-                  className="ml-auto rounded-[4px] bg-primary px-5 py-2.5 text-[12px] font-bold text-white hover:bg-primary-dark"
+                  className="proposal-dialog-action proposal-dialog-action-primary ml-auto"
+                  data-state="success"
                   onClick={closeDialog}
                 >
                   Đóng
@@ -325,13 +328,13 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
               ) : (
                 <>
                   {step === 1 ? (
-                    <button type="button" className="text-[15px] text-gray-500 hover:text-gray-800" onClick={closeDialog}>
+                    <button type="button" className="proposal-dialog-action proposal-dialog-action-secondary" onClick={closeDialog}>
                       Hủy
                     </button>
                   ) : (
                     <button
                       type="button"
-                      className="text-[15px] text-gray-500 hover:text-gray-800"
+                      className="proposal-dialog-action proposal-dialog-action-secondary"
                       onClick={() => setStep((step - 1) as 1 | 2)}
                     >
                       ← Quay lại
@@ -341,7 +344,8 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                     <button
                       type="button"
                       disabled={step === 1 ? !selectedOption : details.trim().length < 10}
-                      className="min-w-[148px] rounded-[5px] bg-primary px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-[#ffb595]"
+                      className="proposal-dialog-action proposal-dialog-action-primary"
+                      data-state={step === 1 ? (!selectedOption ? "disabled" : "default") : (details.trim().length < 10 ? "disabled" : "default")}
                       onClick={() => setStep((step + 1) as 2 | 3)}
                     >
                       Tiếp theo →
@@ -350,10 +354,12 @@ export function ProposalDialog({ entity, entityName, entityKey }: ProposalDialog
                     <button
                       type="button"
                       disabled={!agreed || submitting}
-                      className="min-w-[148px] rounded-[5px] bg-primary px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-[#ffb595]"
+                      className="proposal-dialog-action proposal-dialog-action-primary"
+                      data-state={submitting ? "loading" : submitError ? "error" : (!agreed ? "disabled" : "default")}
+                      aria-busy={submitting}
                       onClick={submitProposal}
                     >
-                      {submitting ? "Đang gửi..." : "Gửi đề xuất"}
+                      {submitting ? "Đang gửi…" : "Gửi đề xuất"}
                     </button>
                   )}
                 </>
